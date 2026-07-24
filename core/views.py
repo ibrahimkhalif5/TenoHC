@@ -19,6 +19,12 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return self.request.user.role == "ADMIN"
 
 
+class LabAdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Admins, lab technicians, and nurses can manage lab templates."""
+    def test_func(self):
+        return self.request.user.role in ("ADMIN", "LAB_TECHNICIAN", "NURSE", "DOCTOR")
+
+
 class ItemListView(AdminRequiredMixin, View):
     def get(self, request):
         query = request.GET.get("q", "").strip()
@@ -303,7 +309,7 @@ def item_search_json(request):
 
 # ── Lab Test Template Management (Admin) ────────────────────────────
 
-class LabTemplateListView(AdminRequiredMixin, View):
+class LabTemplateListView(LabAdminRequiredMixin, View):
     def get(self, request):
         from laboratory.models import LabTestTemplate
         templates = (
@@ -318,7 +324,7 @@ class LabTemplateListView(AdminRequiredMixin, View):
         })
 
 
-class LabTemplateCreateView(AdminRequiredMixin, View):
+class LabTemplateCreateView(LabAdminRequiredMixin, View):
     def get(self, request):
         from laboratory.models import LabTest, LabTestTemplate
         lab_tests = LabTest.objects.filter(is_active=True).order_by("category", "name")
@@ -385,7 +391,7 @@ class LabTemplateCreateView(AdminRequiredMixin, View):
         return redirect("core:lab-template-list")
 
 
-class LabTemplateUpdateView(AdminRequiredMixin, View):
+class LabTemplateUpdateView(LabAdminRequiredMixin, View):
     def get(self, request, pk):
         from laboratory.models import LabTestTemplate
         template = get_object_or_404(LabTestTemplate.objects.select_related("lab_test"), pk=pk)
@@ -442,7 +448,7 @@ class LabTemplateUpdateView(AdminRequiredMixin, View):
         return redirect("core:lab-template-list")
 
 
-class LabTemplateDeleteView(AdminRequiredMixin, View):
+class LabTemplateDeleteView(LabAdminRequiredMixin, View):
     def post(self, request, pk):
         from laboratory.models import LabTestTemplate
         template = get_object_or_404(LabTestTemplate, pk=pk)
