@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register Patient - THHIMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-person-plus"></i> Register Patient</h4>
+    <a href="{% url 'patients:patient-list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list"></i> All Patients
+    </a>
+</div>
+
+<div class="row">
+    <!-- Search Existing Patients -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-search"></i> Search Existing Patients</h6>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'patients:patient-register' %}">
+                    <div class="input-group mb-3">
+                        <input type="text" name="q" class="form-control" placeholder="Search by name, phone, or ID..."
+                               value="{{ query }}" autofocus>
+                        <button class="btn btn-outline-primary" type="submit">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </form>
+
+                {% if search_results %}
+                <div class="list-group">
+                    {% for patient in search_results %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">
+                                    <strong>{{ patient.patient_number }}</strong> - {{ patient.full_name }}
+                                </h6>
+                                <small class="text-muted">
+                                    {{ patient.gender }} | Age: {{ patient.age }} | {{ patient.phone }}
+                                </small>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'patients:patient-detail' pk=patient.pk %}"
+                                   class="btn btn-outline-info" title="View Profile">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <form method="post" action="{% url 'patients:patient-create-visit' pk=patient.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-success" title="New Visit (Triage)">
+                                        <i class="bi bi-plus-circle"></i> New Visit
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% elif query %}
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle"></i> No patients found matching "{{ query }}".
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Form -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-person-plus"></i> New Patient Registration</h6>
+            </div>
+            <div class="card-body">
+                {% crispy form %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

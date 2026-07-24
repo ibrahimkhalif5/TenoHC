@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Dispense Medication{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-capsule me-2"></i>Dispense Medication
+        </h5>
+        <a href="{% url 'pharmacy:pharmacy-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Queue
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-person me-2"></i>Patient Information</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td>Name</td><td><strong>{{ patient.full_name }}</strong></td></tr>
+                        <tr><td>Patient #</td><td>{{ patient.patient_number }}</td></tr>
+                        <tr><td>Visit #</td><td>{{ visit.visit_number }}</td></tr>
+                        <tr><td>Phone</td><td>{{ patient.phone }}</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            {% if dispense_history %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Dispensing History</h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr><th>Medicine</th><th>Qty</th><th>Charge</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for d in dispense_history %}
+                            <tr>
+                                <td><small>{{ d.medicine.name }}</small></td>
+                                <td><small>{{ d.quantity_dispensed }}</small></td>
+                                <td><small>KSh {{ d.charge|floatformat:2 }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-8">
+            {% if pending_prescriptions %}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-capsule me-2"></i>Pending Prescriptions</h6>
+                    {% if pending_prescriptions|length > 1 %}
+                    <form method="post" action="{% url 'pharmacy:pharmacy-dispense-all' visit.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-light btn-sm" onclick="return confirm('Dispense all pending prescriptions?')">
+                            <i class="bi bi-lightning me-1"></i>Dispense All
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% for rx in pending_prescriptions %}
+                    <div class="card mb-3 border-{% cycle 'primary' 'success' 'warning' 'info' %}">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2">
+                            <strong><i class="bi bi-capsule me-1"></i>{{ rx.medicine.name }}</strong>
+                            <span class="badge bg-secondary">{{ rx.medicine.strength }}</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3"><small class="text-muted">Dosage</small><br>{{ rx.dosage }} {{ rx.get_dosage_unit_display }}</div>
+                                <div class="col-md-3"><small class="text-muted">Frequency</small><br>{{ rx.frequency }}</div>
+                                <div class="col-md-2"><small class="text-muted">Duration</small><br>{{ rx.duration_days }} day{{ rx.duration_days|pluralize }}</div>
+                                <div class="col-md-2"><small class="text-muted">Quantity</small><br><strong>{{ rx.quantity }}</strong></div>
+                                <div class="col-md-2"><small class="text-muted">Route</small><br>{{ rx.route|default:"Oral" }}</div>
+                            </div>
+                            {% if rx.instructions %}
+                            <div class="mt-2">
+                                <small class="text-muted">Instructions:</small>
+                                <p class="mb-0 small">{{ rx.instructions }}</p>
+                            </div>
+                            {% endif %}
+                            <div class="mt-3">
+                                <form method="post" action="{% url 'pharmacy:pharmacy-dispense-single' rx.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Dispense {{ rx.medicine.name }} x{{ rx.quantity }}?')">
+                                        <i class="bi bi-check-lg me-1"></i>Dispense
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-check-circle display-1 text-success"></i>
+                    <h4 class="mt-3">All prescriptions dispensed</h4>
+                    <p class="text-muted mb-3">All prescribed medications for this patient have been dispensed.</p>
+                    <form method="post" action="{% url 'pharmacy:pharmacy-finish-visit' visit.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Mark this visit as completed?')">
+                            <i class="bi bi-check-lg me-1"></i>Finish Visit
+                        </button>
+                    </form>
+                    <a href="{% url 'pharmacy:pharmacy-list' %}" class="btn btn-outline-secondary ms-2">
+                        Back to Queue
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

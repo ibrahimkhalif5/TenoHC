@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Item Master - THHIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-box-seam me-2"></i>Item Master (Service Catalog)
+            <span class="badge bg-secondary ms-2">{{ total_count }}</span>
+        </h5>
+        <div class="d-flex gap-2">
+            <a href="{% url 'core:item-import' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-upload me-1"></i>Import CSV
+            </a>
+            <a href="{% url 'core:item-export' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </a>
+            <a href="{% url 'core:item-create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle me-1"></i>Add Item
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Search</label>
+                    <input type="text" name="q" class="form-control" placeholder="Search by name, code, or description..." value="{{ query }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for val, label in categories %}
+                        <option value="{{ val }}" {% if val == selected_category %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Department</label>
+                    <select name="department" class="form-select">
+                        <option value="">All Departments</option>
+                        {% for val, label in departments %}
+                        <option value="{{ val }}" {% if val == selected_department %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All</option>
+                        <option value="active" {% if selected_status == "active" %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <form method="post" action="{% url 'core:item-bulk-toggle' %}" id="bulk-form">
+        {% csrf_token %}
+        <div class="d-flex gap-2 mb-3" id="bulk-actions" style="display: none !important;">
+            <button type="submit" name="action" value="activate" class="btn btn-success btn-sm">
+                <i class="bi bi-check-circle me-1"></i>Activate Selected
+            </button>
+            <button type="submit" name="action" value="deactivate" class="btn btn-warning btn-sm">
+                <i class="bi bi-x-circle me-1"></i>Deactivate Selected
+            </button>
+            <span class="text-muted small align-self-center" id="selected-count"></span>
+        </div>
+
+        <!-- Items Table -->
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 30px;"><input type="checkbox" id="select-all" class="form-check-input"></th>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Normal Range</th>
+                                <th>Department</th>
+                                <th class="text-end">Price (KSH)</th>
+                                <th class="text-end">Cost (KSH)</th>
+                                <th>Unit</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr class="{% if not item.is_active %}table-secondary{% endif %}">
+                                <td>
+                                    <input type="checkbox" name="item_ids" value="{{ item.pk }}" class="form-check-input item-checkbox">
+                                </td>
+                                <td><code>{{ item.item_code }}</code></td>
+                                <td>
+                                    <strong>{{ item.name }}</strong>
+                                    {% if item.description %}
+                                    <br><small class="text-muted">{{ item.description|truncatewords:10 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge bg-info">{{ item.get_category_display }}</span></td>
+                                <td><small class="text-muted">{{ item.normal_range|default:"--" }}</small></td>
+                                <td>{{ item.get_department_display }}</td>
+                                <td class="text-end">{{ item.unit_price|floatformat:0 }}</td>
+                                <td class="text-end text-muted">{{ item.cost_price|floatformat:0 }}</td>
+                                <td>{{ item.unit_of_measure }}</td>
+                                <td>
+                                    {% if item.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'core:item-update' item.pk %}" class="btn btn-outline-primary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form method="post" action="{% url 'core:item-toggle' item.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-{% if item.is_active %}warning{% else %}success{% endif %}" title="{% if item.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                <i class="bi bi-{% if item.is_active %}pause-circle{% else %}play-circle{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    No items found. <a href="{% url 'core:item-create' %}">Add your first item</a>.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    const bulkActions = document.getElementById('bulk-actions');
+    const countEl = document.getElementById('selected-count');
+
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateBulk();
+    });
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulk);
+    });
+
+    function updateBulk() {
+        const count = document.querySelectorAll('.item-checkbox:checked').length;
+        bulkActions.style.display = count > 0 ? 'flex' : 'none';
+        countEl.textContent = count + ' selected';
+    }
+});
+</script>
+{% endblock %}

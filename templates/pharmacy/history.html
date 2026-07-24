@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Dispensing History{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-clock-history me-2"></i>Dispensing History
+        </h5>
+        <a href="{% url 'pharmacy:pharmacy-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">Patient: {{ patient.full_name }} ({{ patient.patient_number }}) — Visit: {{ visit.visit_number }}</h6>
+        </div>
+        <div class="card-body p-0">
+            {% if dispenses %}
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Medicine</th>
+                        <th>Quantity</th>
+                        <th>Charge</th>
+                        <th>Batch</th>
+                        <th>Pharmacist</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in dispenses %}
+                    <tr>
+                        <td><small>{{ d.dispensed_at|date:"M d, Y H:i" }}</small></td>
+                        <td>{{ d.medicine.name }}</td>
+                        <td>{{ d.quantity_dispensed }}</td>
+                        <td>KSh {{ d.charge|floatformat:2 }}</td>
+                        <td><small class="text-muted">{{ d.batch_number }}</small></td>
+                        <td>{{ d.dispensed_by.get_full_name|default:d.dispensed_by.username }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-3 mb-0">No dispensing records for this visit.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

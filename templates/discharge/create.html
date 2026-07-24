@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+
+{% block title %}Discharge Summary - {{ admission.patient.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ds-section { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 1rem; overflow: visible; }
+    .ds-section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; padding: 0.75rem 1rem 0; }
+    .ds-section-body { padding: 0.75rem 1rem 1rem; }
+    .ds-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1.5rem; }
+    .ds-grid .ds-item { display: flex; gap: 0.5rem; padding: 0.3rem 0; border-bottom: 1px solid #f3f4f6; }
+    .ds-grid .ds-label { font-size: 0.78rem; color: #9ca3af; font-weight: 600; min-width: 120px; flex-shrink: 0; }
+    .ds-grid .ds-value { font-size: 0.85rem; color: #1f2937; }
+    .ds-field-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.88rem; line-height: 1.6; white-space: pre-wrap; }
+    .med-table th { font-size: 0.78rem; background: #f9fafb; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid #e5e7eb; }
+    .med-table td { font-size: 0.85rem; vertical-align: middle; }
+    .ds-badge { font-size: 0.78rem; font-weight: 600; padding: 0.3em 0.7em; border-radius: 6px; }
+    .med-search-wrap { position: relative; }
+    .med-search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; background: #fff; border: 1px solid #dee2e6; border-radius: 0 0 6px 6px; max-height: 220px; overflow-y: auto; display: none; box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+    .med-search-results .med-result-item { padding: 6px 10px; cursor: pointer; font-size: 0.83rem; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; }
+    .med-search-results .med-result-item:hover { background: #f0f7ff; }
+    .med-search-results .med-result-item .med-name { font-weight: 600; color: #1f2937; }
+    .med-search-results .med-result-item .med-meta { color: #6b7280; font-size: 0.78rem; }
+    .med-search-results .med-no-results { padding: 8px 10px; color: #9ca3af; font-size: 0.83rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="mb-1">
+                <i class="bi bi-file-earmark-medical me-2"></i>Discharge Summary
+            </h5>
+            <small class="text-muted">
+                {{ admission.patient.full_name }} &middot; {{ admission.patient.patient_number }} &middot; ADM-{{ admission.pk|stringformat:"06d" }}
+                {% if summary.status == "FINALIZED" %}
+                    <span class="badge bg-success ms-2 ds-badge">Finalized</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark ms-2 ds-badge">Draft</span>
+                {% endif %}
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'discharge:discharge-admission-list' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </a>
+            {% if summary.status != "FINALIZED" %}
+            <form method="post" action="{% url 'discharge:discharge-summary-finalize' summary.pk %}" class="d-inline"
+                  onsubmit="return confirm('Are you sure you want to finalize this discharge summary? The patient will be discharged and the bed will be freed.')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-check-circle me-1"></i>Finalize Discharge
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'discharge:discharge-summary-pdf' summary.pk %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+            </a>
+            <a href="{% url 'discharge:discharge-summary-print' summary.pk %}" class="btn btn-outline-info btn-sm" target="_blank">
+                <i class="bi bi-printer me-1"></i>Print
+            </a>
+        </div>
+    </div>
+
+    <form method="post" action="{% url 'discharge:discharge-summary-save' summary.pk %}" id="dischargeForm">
+        {% csrf_token %}
+
+        <!-- Patient Information -->
+        <div class="ds-section">
+            <div class="ds-section-title">Patient Information</div>
+            <div class="ds-section-body">
+                <div class="ds-grid">
+                    <div class="ds-item">
+                        <span class="ds-label">Patient Number</span>
+                        <span class="ds-value">{{ admission.patient.patient_number }}</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Patient Name</span>
+                        <span class="ds-value">{{ admission.patient.full_name }}</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Age</span>
+                        <span class="ds-value">{{ admission.patient.age }} years</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Gender</span>
+                        <span class="ds-value">{{ admission.patient.get_gender_display }}</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Phone Number</span>
+                        <span class="ds-value">{{ admission.patient.phone }}</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">National ID</span>
+                        <span class="ds-value">{{ admission.patient.national_id|default:"—" }}</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Admission No.</span>
+                        <span class="ds-value">ADM-{{ admission.pk|stringformat:"06d" }}</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Admitted</span>
+                        <span class="ds-value">{{ admission.admission_date|date:"d M Y" }}</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Discharged</span>
+                        <span class="ds-value">
+                            {% if admission.discharge_date %}
+                                {{ admission.discharge_date|date:"d M Y" }}
+                            {% else %}
+                                <span class="text-muted">Pending</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Length of Stay</span>
+                        <span class="ds-value">
+                            {% if summary %}
+                                {{ summary.length_of_stay }} day(s)
+                            {% else %}
+                                —
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Ward</span>
+                        <span class="ds-value">{{ admission.ward.name }} ({{ admission.ward.get_ward_type_display }})</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Room</span>
+                        <span class="ds-value">{{ admission.room.room_number }} ({{ admission.room.get_room_type_display }})</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Bed</span>
+                        <span class="ds-value">{{ admission.bed.bed_number }}</span>
+                    </div>
+                    <div class="ds-item">
+                        <span class="ds-label">Attending Doctor</span>
+                        <span class="ds-value">{{ admission.admitted_by.get_full_name|default:"—" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clinical Information -->
+        <div class="ds-section">
+            <div class="ds-section-title">Clinical Information</div>
+            <div class="ds-section-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="id_primary_diagnosis" class="form-label fw-semibold small text-muted">Primary Diagnosis <span class="text-danger">*</span></label>
+                        {{ form.primary_diagnosis }}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="id_secondary_diagnosis" class="form-label fw-semibold small text-muted">Secondary Diagnosis</label>
+                        {{ form.secondary_diagnosis }}
+                    </div>
+                    <div class="col-12">
+                        <label for="id_reason_for_admission" class="form-label fw-semibold small text-muted">Reason for Admission</label>
+                        {{ form.reason_for_admission }}
+                    </div>
+                    <div class="col-12">
+                        <label for="id_history_of_present_illness" class="form-label fw-semibold small text-muted">History of Present Illness</label>
+                        {{ form.history_of_present_illness }}
+                    </div>
+                    <div class="col-12">
+                        <label for="id_clinical_findings" class="form-label fw-semibold small text-muted">Clinical Findings</label>
+                        {{ form.clinical_findings }}
+                    </div>
+
+                    <!-- Auto-populated Investigations -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold small text-muted">Investigations Performed <small>(auto-populated from records)</small></label>
+                        <div class="border rounded p-3 bg-light" style="max-height:200px; overflow-y:auto;">
+                            {% if labs %}
+                            <strong class="text-primary">Laboratory Tests:</strong>
+                            <ul class="mb-2">
+                                {% for lab in labs %}
+                                <li><strong>{{ lab.lab_test.name }}</strong> &mdash; {{ lab.result|default:"Pending" }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                            {% if rads %}
+                            <strong class="text-primary">Radiology:</strong>
+                            <ul class="mb-0">
+                                {% for rad in rads %}
+                                <li><strong>{{ rad.radiology_service.name }}</strong> &mdash; {{ rad.findings|default:"Pending" }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                            {% if not labs and not rads %}
+                            <p class="text-muted mb-0">No investigations found for this visit.</p>
+                            {% endif %}
+                        </div>
+                        <label for="id_investigations_performed" class="form-label fw-semibold small text-muted mt-3">Additional Investigations (manual entry)</label>
+                        {{ form.investigations_performed }}
+                    </div>
+
+                    <!-- Auto-populated Procedures -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold small text-muted">Treatments & Procedures <small>(auto-populated from records)</small></label>
+                        <div class="border rounded p-3 bg-light" style="max-height:200px; overflow-y:auto;">
+                            {% if treatments %}
+                            <ul class="mb-0">
+                                {% for t in treatments %}
+                                <li><strong>{{ t.treatment }}</strong>{% if t.medication %} &mdash; {{ t.medication }} ({{ t.dosage }}){% endif %}{% if t.notes %} <em>({{ t.notes }})</em>{% endif %}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-muted mb-0">No treatments recorded during admission.</p>
+                            {% endif %}
+                        </div>
+                        <label for="id_procedures_done" class="form-label fw-semibold small text-muted mt-3">Procedures Done During Admission</label>
+                        {{ form.procedures_done }}
+                    </div>
+                    <div class="col-12">
+                        <label for="id_treatment_given" class="form-label fw-semibold small text-muted">Treatment Given <span class="text-danger">*</span></label>
+                        {{ form.treatment_given }}
+                    </div>
+                    <div class="col-12">
+                        <label for="id_patient_progress" class="form-label fw-semibold small text-muted">Patient Progress During Admission</label>
+                        {{ form.patient_progress }}
+                    </div>
+                    <div class="col-12">
+                        <label for="id_condition_on_discharge" class="form-label fw-semibold small text-muted">Condition on Discharge <span class="text-danger">*</span></label>
+                        {{ form.condition_on_discharge }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% if summary.status != "FINALIZED" %}
+    </form>
+    {% endif %}
+
+        <!-- Medication on Discharge -->
+        <div class="ds-section">
+            <div class="ds-section-title">Medication on Discharge</div>
+            <div class="ds-section-body">
+                {% if summary.discharge_medications.exists %}
+                <table class="table table-bordered med-table mb-3">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Medicine</th>
+                            <th>Dosage</th>
+                            <th>Frequency</th>
+                            <th>Duration</th>
+                            <th>Instructions</th>
+                            {% if summary.status != "FINALIZED" %}
+                            <th class="text-center" style="width:60px;">Action</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for med in summary.discharge_medications.all %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ med.medicine_name }}</td>
+                            <td>{{ med.dosage|default:"—" }}</td>
+                            <td>{{ med.frequency|default:"—" }}</td>
+                            <td>{{ med.duration|default:"—" }}</td>
+                            <td>{{ med.instructions|default:"—" }}</td>
+                            {% if summary.status != "FINALIZED" %}
+                            <td class="text-center">
+                                <form method="post" action="{% url 'discharge:discharge-medication-remove' med.pk %}" class="d-inline"
+                                      onsubmit="return confirm('Remove this medication?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Remove">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted mb-3">No discharge medications added yet.</p>
+                {% endif %}
+
+                {% if summary.status != "FINALIZED" %}
+                <form method="post" action="{% url 'discharge:discharge-medication-add' summary.pk %}">
+                    {% csrf_token %}
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-muted">Medicine Name <span class="text-danger">*</span></label>
+                            <div class="med-search-wrap">
+                                <input type="text" name="medicine_name" id="med-search-input" class="form-control" required
+                                       placeholder="Type to search..." autocomplete="off">
+                                <div class="med-search-results" id="med-search-results"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small text-muted">Dosage</label>
+                            <input type="text" name="dosage" class="form-control" placeholder="e.g., 500mg">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small text-muted">Frequency</label>
+                            <input type="text" name="frequency" class="form-control" placeholder="e.g., 3x daily">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small text-muted">Duration</label>
+                            <input type="text" name="duration" class="form-control" placeholder="e.g., 7 days">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small text-muted">Instructions</label>
+                            <input type="text" name="instructions" class="form-control" placeholder="e.g., After food">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+    {% if summary.status != "FINALIZED" %}
+    <form method="post" action="{% url 'discharge:discharge-summary-save' summary.pk %}" id="dischargeForm">
+        {% csrf_token %}
+    {% endif %}
+
+        <!-- Billing Summary -->
+        <div class="ds-section">
+            <div class="ds-section-title">Billing Summary</div>
+            <div class="ds-section-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm mb-0">
+                            <tr>
+                                <td class="text-muted">Ward Charge ({{ billing.nights_stayed }} nights &times; KSh {{ billing.price_per_night|floatformat:2 }})</td>
+                                <td class="text-end">KSh {{ billing.ward_charge|floatformat:2 }}</td>
+                            </tr>
+                            {% if billing.invoice_count > 0 %}
+                            <tr>
+                                <td class="text-muted">Other Charges ({{ billing.invoice_count }} invoice{{ billing.invoice_count|pluralize }})</td>
+                                <td class="text-end">KSh {{ billing.other_charges|floatformat:2 }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr class="border-top">
+                                <td><strong>Total Hospital Bill</strong></td>
+                                <td class="text-end"><strong>KSh {{ billing.total_billed|floatformat:2 }}</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm mb-0">
+                            {% if billing.nhif_bed_rebate > 0 %}
+                            <tr>
+                                <td class="text-muted">NHIF/SHA Bed Rebate ({{ billing.nights_stayed }} nights &times; KSh {{ billing.rebate_per_night|floatformat:2 }})</td>
+                                <td class="text-end text-success">- KSh {{ billing.nhif_bed_rebate|floatformat:2 }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td class="text-muted">(-) Total Amount Paid</td>
+                                <td class="text-end text-success">- KSh {{ billing.total_paid|floatformat:2 }}</td>
+                            </tr>
+                            <tr class="border-top">
+                                <td><strong>Outstanding Before Rebate</strong></td>
+                                <td class="text-end">
+                                    <strong>KSh {{ billing.outstanding_before_rebate|floatformat:2 }}</strong>
+                                </td>
+                            </tr>
+                            {% if billing.nhif_bed_rebate > 0 %}
+                            <tr>
+                                <td><strong class="text-success">Final Balance After NHIF/SHA Rebate</strong></td>
+                                <td class="text-end">
+                                    <strong class="text-success">KSh {{ billing.final_balance|floatformat:2 }}</strong>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Doctor Information -->
+            <div class="ds-section-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small text-muted">Doctor Name</label>
+                        <input type="text" class="form-control" value="{{ summary.finalized_by.get_full_name|default:admission.admitted_by.get_full_name|default:'' }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small text-muted">Date</label>
+                        <input type="text" class="form-control" value="{% if summary.finalized_at %}{{ summary.finalized_at|date:'d M Y' }}{% else %}{% now 'd M Y' %}{% endif %}" readonly>
+                    </div>
+                    {% if summary.status != "FINALIZED" %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small text-muted">Doctor Signature (optional)</label>
+                        <input type="file" name="doctor_signature" class="form-control" accept="image/*">
+                        {% if summary.doctor_signature %}
+                        <div class="mt-2">
+                            <img src="{{ summary.doctor_signature.url }}" alt="Signature" style="max-height:60px;" class="border rounded p-1">
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif summary.doctor_signature %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small text-muted">Doctor Signature</label>
+                        <div>
+                            <img src="{{ summary.doctor_signature.url }}" alt="Signature" style="max-height:60px;" class="border rounded p-1">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        {% if summary.status != "FINALIZED" %}
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Save Draft
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const input = document.getElementById('med-search-input');
+    const resultsBox = document.getElementById('med-search-results');
+    if (!input || !resultsBox) return;
+
+    let debounceTimer;
+    input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const q = this.value.trim();
+        if (q.length < 2) { resultsBox.style.display = 'none'; return; }
+
+        debounceTimer = setTimeout(() => {
+            fetch(`/inventory/api/medicines/?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    resultsBox.innerHTML = '';
+                    if (!data.results || data.results.length === 0) {
+                        resultsBox.innerHTML = '<div class="med-no-results">No medicines found</div>';
+                        resultsBox.style.display = 'block';
+                        return;
+                    }
+                    data.results.forEach(med => {
+                        const div = document.createElement('div');
+                        div.className = 'med-result-item';
+                        const meta = [med.strength, med.dosage_form].filter(Boolean).join(' &middot; ');
+                        div.innerHTML = `<span class="med-name">${med.name}</span><span class="med-meta">${meta ? meta + ' &middot; ' : ''}Stock: ${med.current_stock}</span>`;
+                        div.addEventListener('click', () => {
+                            input.value = med.name;
+                            resultsBox.style.display = 'none';
+                        });
+                        resultsBox.appendChild(div);
+                    });
+                    resultsBox.style.display = 'block';
+                });
+        }, 250);
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => { resultsBox.style.display = 'none'; }, 200);
+    });
+    input.addEventListener('focus', () => {
+        if (resultsBox.children.length > 0) resultsBox.style.display = 'block';
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Discharge Summaries{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-file-earmark-medical me-2"></i>Discharge Summaries
+        </h5>
+        <a href="{% url 'discharge:discharge-admission-list' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>New Discharge Summary
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            {% if summaries %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Patient</th>
+                            <th>Patient No.</th>
+                            <th>Ward</th>
+                            <th>Admission Date</th>
+                            <th>Status</th>
+                            <th>Created By</th>
+                            <th>Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ds in summaries %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'discharge:discharge-summary-detail' ds.pk %}" class="text-decoration-none fw-semibold">
+                                    {{ ds.admission.patient.full_name }}
+                                </a>
+                            </td>
+                            <td><code>{{ ds.admission.patient.patient_number }}</code></td>
+                            <td>{{ ds.admission.ward.name }}</td>
+                            <td>{{ ds.admission.admission_date|date:"d M Y" }}</td>
+                            <td>
+                                {% if ds.status == "FINALIZED" %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Finalized</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-pencil me-1"></i>Draft</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ ds.created_by|default:"—" }}</td>
+                            <td>{{ ds.created_at|date:"d M Y H:i" }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'discharge:discharge-summary-detail' ds.pk %}" class="btn btn-outline-primary btn-sm" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'discharge:discharge-summary-pdf' ds.pk %}" class="btn btn-outline-secondary btn-sm" title="Download PDF">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                                <a href="{% url 'discharge:discharge-summary-print' ds.pk %}" class="btn btn-outline-info btn-sm" target="_blank" title="Print">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-file-earmark-medical display-4 text-muted"></i>
+                <p class="text-muted mt-3">No discharge summaries found.</p>
+                <a href="{% url 'discharge:discharge-admission-list' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>Create First Discharge Summary
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

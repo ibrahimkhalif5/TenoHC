@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Expiring Stock{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i>Expiring Stock</h4>
+        <a href="{% url 'inventory:inventory-dashboard' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+
+    {% if expired %}
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger text-white"><i class="bi bi-x-circle me-1"></i>Expired Stock</div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light"><tr><th>Medicine</th><th>Batch</th><th>Qty</th><th>Expiry</th></tr></thead>
+                <tbody>
+                    {% for s in expired %}
+                    <tr>
+                        <td>{{ s.medicine.name }}</td>
+                        <td>{{ s.batch_number }}</td>
+                        <td>{{ s.quantity }}</td>
+                        <td class="text-danger">{{ s.expiry_date|date:"d M Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header bg-warning"><i class="bi bi-clock me-1"></i>Expiring Within 30 Days</div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light"><tr><th>Medicine</th><th>Batch</th><th>Qty</th><th>Expiry</th><th>Days Left</th></tr></thead>
+                <tbody>
+                    {% for s in expiring %}
+                    <tr>
+                        <td>{{ s.medicine.name }}</td>
+                        <td>{{ s.batch_number }}</td>
+                        <td>{{ s.quantity }}</td>
+                        <td>{{ s.expiry_date|date:"d M Y" }}</td>
+                        <td><span class="badge bg-warning text-dark">{{ s.days_until_expiry }} days</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">No stock expiring soon.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

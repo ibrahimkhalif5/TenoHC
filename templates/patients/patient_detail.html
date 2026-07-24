@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% load visit_tags %}
+
+{% block title %}{{ patient.full_name }} - THHIMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">
+            <i class="bi bi-person"></i> {{ patient.full_name }}
+            <span class="badge bg-primary ms-2">{{ patient.patient_number }}</span>
+        </h4>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'patients:patient-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+        <form method="post" action="{% url 'patients:patient-create-visit' pk=patient.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-sm">
+                <i class="bi bi-plus-circle"></i> New Visit
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Patient Info Sidebar -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                {% if patient.photo %}
+                <img src="{{ patient.photo.url }}" alt="Photo"
+                     class="rounded-circle mb-3" style="width: 100px; height: 100px; object-fit: cover;">
+                {% else %}
+                <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width: 100px; height: 100px;">
+                    <i class="bi bi-person" style="font-size: 3rem; color: #ccc;"></i>
+                </div>
+                {% endif %}
+
+                <h5>{{ patient.full_name }}</h5>
+                <p class="text-muted mb-3">{{ patient.get_gender_display }} | Age: {{ patient.age }}</p>
+
+                <table class="table table-sm table-borderless text-start">
+                    <tr><td class="text-muted" style="width: 40%">Patient #</td><td><strong>{{ patient.patient_number }}</strong></td></tr>
+                    <tr><td class="text-muted">Phone</td><td>{{ patient.phone }}</td></tr>
+                    <tr><td class="text-muted">DOB</td><td>{{ patient.date_of_birth|date:"d M Y" }}</td></tr>
+                    {% if patient.national_id %}
+                    <tr><td class="text-muted">NIN</td><td>{{ patient.national_id }}</td></tr>
+                    {% endif %}
+                    <tr><td class="text-muted">Type</td><td>{{ patient.get_patient_type_display }}</td></tr>
+                    <tr><td class="text-muted">Payment</td><td>{{ patient.get_payment_type_display }}</td></tr>
+                    {% if patient.patient_category %}
+                    <tr><td class="text-muted">Category</td><td>{{ patient.patient_category.name }}</td></tr>
+                    {% endif %}
+                    <tr><td class="text-muted">Address</td><td>{{ patient.address|truncatewords:10 }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Next of Kin -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-person-lines-fill"></i> Next of Kin</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless">
+                    <tr><td class="text-muted">Name</td><td>{{ patient.next_of_kin_name }}</td></tr>
+                    <tr><td class="text-muted">Phone</td><td>{{ patient.next_of_kin_phone }}</td></tr>
+                    {% if patient.next_of_kin_relationship %}
+                    <tr><td class="text-muted">Relationship</td><td>{{ patient.next_of_kin_relationship }}</td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Visit History -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-clock-history"></i> Visit History</h6>
+                <span class="badge bg-primary">{{ visits.count }} visits</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Visit #</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Created By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for visit in visits %}
+                            <tr>
+                                <td><strong>{{ visit.visit_number }}</strong></td>
+                                <td>{{ visit.visit_date|date:"d M Y" }}</td>
+                                <td>
+                                    {% visit_status_badge visit %}
+                                </td>
+                                <td>{{ visit.created_by|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">No visits yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consultations & Prescriptions -->
+        {% if consultations %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-chat-dots"></i> Consultation History</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="accordion" id="consultationAccordion">
+                    {% for consultation in consultations %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#c{{ consultation.pk }}">
+                                <div class="d-flex w-100 justify-content-between align-items-center me-3">
+                                    <span>
+                                        <span class="badge bg-{% if consultation.status == 'COMPLETED' %}success{% else %}warning{% endif %} me-2">{{ consultation.get_status_display }}</span>
+                                        {{ consultation.started_at|date:"d M Y H:i" }}
+                                    </span>
+                                    <small class="text-muted me-3">{{ consultation.doctor.get_full_name|default:consultation.doctor.username }}</small>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="c{{ consultation.pk }}" class="accordion-collapse collapse" data-bs-parent="#consultationAccordion">
+                            <div class="accordion-body">
+                                {% if consultation.diagnosis %}
+                                <p><strong>Diagnosis:</strong><br>{{ consultation.diagnosis }}</p>
+                                {% endif %}
+                                {% if consultation.notes %}
+                                <p><strong>Notes:</strong><br>{{ consultation.notes }}</p>
+                                {% endif %}
+                                {% if consultation.treatment_plan %}
+                                <p><strong>Treatment Plan:</strong><br>{{ consultation.treatment_plan }}</p>
+                                {% endif %}
+                                {% if consultation.prescriptions.exists %}
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Qty</th><th>Status</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rx in consultation.prescriptions.all %}
+                                        <tr>
+                                            <td>{{ rx.medicine.name }}</td>
+                                            <td>{{ rx.dosage }} {{ rx.get_dosage_unit_display }}</td>
+                                            <td>{{ rx.frequency }}</td>
+                                            <td>{{ rx.duration_days }} day{{ rx.duration_days|pluralize }}</td>
+                                            <td>{{ rx.quantity }}</td>
+                                            <td>{% if rx.is_dispensed %}<span class="badge bg-success">Dispensed</span>{% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Lab Requests -->
+        {% if lab_requests %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-lab"></i> Lab Requests</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Date</th><th>Test</th><th>Result</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for lab in lab_requests %}
+                        <tr>
+                            <td><small>{{ lab.created_at|date:"d M Y" }}</small></td>
+                            <td>{{ lab.lab_test.name }}</td>
+                            <td><small>{{ lab.result|truncatewords:10|default:"--" }}</small></td>
+                            <td>{% if lab.is_completed %}<span class="badge bg-success">Completed</span>{% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Radiology Requests -->
+        {% if radiology_requests %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-camera-reels"></i> Radiology Requests</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Date</th><th>Service</th><th>Findings</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for rad in radiology_requests %}
+                        <tr>
+                            <td><small>{{ rad.created_at|date:"d M Y" }}</small></td>
+                            <td>{{ rad.radiology_service.name }}</td>
+                            <td><small>{{ rad.findings|truncatewords:10|default:"--" }}</small></td>
+                            <td>{% if rad.is_completed %}<span class="badge bg-success">Completed</span>{% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Pharmacy Dispenses -->
+        {% if pharmacy_dispenses %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-capsule"></i> Pharmacy Dispenses</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Date</th><th>Medicine</th><th>Qty</th><th>Charge</th><th>Pharmacist</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for d in pharmacy_dispenses %}
+                        <tr>
+                            <td><small>{{ d.dispensed_at|date:"d M Y H:i" }}</small></td>
+                            <td>{{ d.medicine.name }}</td>
+                            <td>{{ d.quantity_dispensed }}</td>
+                            <td>KSh {{ d.charge|floatformat:2 }}</td>
+                            <td><small>{{ d.dispensed_by.get_full_name|default:d.dispensed_by.username }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Invoices -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-receipt"></i> Invoices</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Visit</th>
+                                <th>Total</th>
+                                <th>Paid</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in invoices %}
+                            <tr>
+                                <td><strong>{{ invoice.invoice_number }}</strong></td>
+                                <td>{{ invoice.visit.visit_number }}</td>
+                                <td>KSh {{ invoice.total_amount|floatformat:2 }}</td>
+                                <td>KSh {{ invoice.amount_paid|floatformat:2 }}</td>
+                                <td>
+                                    <span class="badge bg-{% if invoice.status == 'PAID' %}success{% elif invoice.status == 'PENDING' %}warning{% else %}secondary{% endif %}">
+                                        {{ invoice.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">No invoices.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

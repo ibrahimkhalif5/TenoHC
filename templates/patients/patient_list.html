@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Patients - THHIMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-people"></i> Patients</h4>
+    <a href="{% url 'patients:patient-register' %}" class="btn btn-success">
+        <i class="bi bi-person-plus"></i> Register Patient
+    </a>
+</div>
+
+<!-- Search -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="get">
+            <div class="input-group">
+                {{ form.query }}
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Patient List -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Patient Number</th>
+                        <th>Name</th>
+                        <th>Gender</th>
+                        <th>Age</th>
+                        <th>Phone</th>
+                        <th>Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in patients %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>{{ patient.patient_number }}</strong></td>
+                        <td>{{ patient.full_name }}</td>
+                        <td>
+                            {% if patient.gender == "MALE" %}
+                                <span class="badge bg-info">M</span>
+                            {% elif patient.gender == "FEMALE" %}
+                                <span class="badge bg-danger">F</span>
+                            {% else %}
+                                <span class="badge bg-secondary">O</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ patient.age }}</td>
+                        <td>{{ patient.phone }}</td>
+                        <td>
+                            <span class="badge bg-{% if patient.patient_type == 'NEW' %}success{% else %}warning{% endif %}">
+                                {{ patient.get_patient_type_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'patients:patient-detail' pk=patient.pk %}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">No patients found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if patients.has_other_pages %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if patients.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ patients.previous_page_number }}{% if query %}&query={{ query }}{% endif %}">
+                        &laquo; Previous
+                    </a>
+                </li>
+                {% endif %}
+                {% for num in patients.paginator.page_range %}
+                <li class="page-item {% if patients.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}{% if query %}&query={{ query }}{% endif %}">
+                        {{ num }}
+                    </a>
+                </li>
+                {% endfor %}
+                {% if patients.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ patients.next_page_number }}{% if query %}&query={{ query }}{% endif %}">
+                        Next &raquo;
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

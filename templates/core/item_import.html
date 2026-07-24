@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Import Items - THHIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-upload me-2"></i>Import Items from CSV
+        </h5>
+        <a href="{% url 'core:item-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Item Master
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Select CSV File</label>
+                            <input type="file" name="csv_file" accept=".csv" class="form-control" required>
+                            <div class="form-text">File must be .csv format with the correct headers.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-1"></i>Import Items
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-file-earmark-text me-1"></i>CSV Format</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">The CSV file must have these headers (first row):</p>
+                    <pre class="bg-light p-2 small rounded" style="font-size: 0.75rem;"><code>Name,Category,Description,Unit Price,Cost Price,Unit of Measure,Department</code></pre>
+                    <p class="small mb-2"><strong>Valid Categories:</strong></p>
+                    <ul class="small mb-2">
+                        <li>MEDICINE</li>
+                        <li>LAB_TEST</li>
+                        <li>RADIOLOGY</li>
+                        <li>ULTRASOUND</li>
+                        <li>PROCEDURE</li>
+                        <li>NURSING</li>
+                        <li>MEDICAL_SUPPLIES</li>
+                        <li>CONSULTATION</li>
+                        <li>REGISTRATION</li>
+                        <li>WARD_CHARGES</li>
+                        <li>OTHER</li>
+                    </ul>
+                    <p class="small mb-0"><strong>Valid Departments:</strong></p>
+                    <ul class="small mb-0">
+                        <li>PHARMACY</li>
+                        <li>LABORATORY</li>
+                        <li>RADIOLOGY</li>
+                        <li>CONSULTATION</li>
+                        <li>NURSING</li>
+                        <li>ADMISSION</li>
+                        <li>REGISTRATION</li>
+                        <li>ADMINISTRATION</li>
+                        <li>OTHER</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-3 border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Notes</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li>Items with blank names are skipped</li>
+                        <li>Invalid categories are rejected</li>
+                        <li>Duplicate names are allowed (use Item Code for uniqueness)</li>
+                        <li>Prices should be numeric (e.g., 500, 1500.00)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

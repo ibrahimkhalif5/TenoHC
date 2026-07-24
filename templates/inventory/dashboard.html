@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h4 class="mb-4"><i class="bi bi-box-seam me-2"></i>Inventory Dashboard</h4>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card stat-card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ stats.total_medicines }}</h3>
+                    <small class="text-muted">Total Medicines</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stat-card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="text-success">KSh {{ stats.total_stock_value|floatformat:0 }}</h3>
+                    <small class="text-muted">Stock Value</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stat-card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ stats.low_stock_count }}</h3>
+                    <small class="text-muted">Low Stock</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stat-card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="text-info">{{ stats.expiring_count }}</h3>
+                    <small class="text-muted">Expiring Soon</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stat-card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ stats.expired_count }}</h3>
+                    <small class="text-muted">Expired</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stat-card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <h3 class="text-secondary">{{ stats.pending_purchases }}</h3>
+                    <small class="text-muted">Pending Purchases</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Low Stock Alert -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning d-flex justify-content-between">
+                    <span><i class="bi bi-exclamation-triangle me-1"></i>Low Stock Alert</span>
+                    <a href="{% url 'inventory:inventory-low-stock' %}" class="text-dark">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Medicine</th><th>Stock</th><th>Min</th></tr></thead>
+                        <tbody>
+                            {% for m in low_stock %}
+                            <tr>
+                                <td>{{ m.name }}</td>
+                                <td class="text-danger fw-bold">{{ m.total_stock|default:0 }}</td>
+                                <td>{{ m.minimum_stock }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-muted text-center">No low stock items</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expiring Soon -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white d-flex justify-content-between">
+                    <span><i class="bi bi-clock-history me-1"></i>Expiring Soon (30 days)</span>
+                    <a href="{% url 'inventory:inventory-expiring' %}" class="text-white">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Medicine</th><th>Batch</th><th>Qty</th><th>Expiry</th></tr></thead>
+                        <tbody>
+                            {% for s in expiring %}
+                            <tr>
+                                <td>{{ s.medicine.name }}</td>
+                                <td>{{ s.batch_number }}</td>
+                                <td>{{ s.quantity }}</td>
+                                <td class="text-danger">{{ s.expiry_date|date:"d M Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-muted text-center">No expiring stock</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

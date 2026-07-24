@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Laboratory - {{ patient.full_name }} - THHIMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vital-item { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #f0f0f0; }
+    .vital-label { color: #6c757d; font-size: 0.8rem; }
+    .vital-value { font-weight: 600; font-size: 0.85rem; }
+    .requested-test { padding: 6px 12px; border-left: 3px solid #198754; background: #f8f9fa; margin-bottom: 6px; border-radius: 0 4px 4px 0; }
+    .btn-send-doctor { font-size: 1rem; padding: 12px 30px; font-weight: 600; letter-spacing: 0.5px; }
+    .btn-save-draft { font-size: 0.9rem; padding: 10px 24px; }
+    .param-result-input { font-weight: 600; font-size: 1rem; text-align: center; }
+    .flag-low { background: #cff4fc; color: #055160; border: 1px solid #9ec5fe; }
+    .flag-high { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+    .flag-normal { background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+    .template-section { border: 2px solid #0d6efd; border-radius: 8px; overflow: hidden; }
+    .template-header { background: linear-gradient(135deg, #0d6efd, #6610f2); color: #fff; padding: 12px 16px; }
+    .param-row { transition: background 0.15s; }
+    .param-row:hover { background: #f8f9fa; }
+    .param-row td { vertical-align: middle; }
+
+    /* ── Print-only hospital header ── */
+    .print-header { display: none; }
+
+    @media print {
+        .no-print { display: none !important; }
+        .sidebar, .topbar { display: none !important; }
+        .main-content { margin: 0 !important; }
+        .page-content { padding: 0 !important; }
+        .print-header { display: block !important; text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #0d6efd; }
+        .print-header img { max-height: 60px; margin-bottom: 6px; }
+        .print-header h4 { margin: 0; font-size: 20px; color: #1a1d21; letter-spacing: 1px; }
+        .print-header p { margin: 2px 0; font-size: 10px; color: #6c757d; }
+        .print-patient-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 20px; font-size: 10px; margin: 12px 0; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; background: #f8f9fa; }
+        .print-patient-info .label { font-weight: bold; color: #6c757d; font-size: 8px; text-transform: uppercase; }
+        .print-patient-info .value { font-weight: 600; color: #1a1d21; }
+        .print-divider { border: none; border-top: 1px solid #dee2e6; margin: 10px 0; }
+        .template-section { border-color: #333 !important; }
+        .template-header { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .flag-low, .flag-high, .flag-normal { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; }
+        .shadow-sm { box-shadow: none !important; }
+        .btn, .no-print { display: none !important; }
+        .print-footer { display: block !important; text-align: center; font-size: 9px; color: #8b919a; margin-top: 20px; border-top: 1px solid #dee2e6; padding-top: 8px; font-style: italic; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Print-Only Hospital Header -->
+<div class="print-header">
+    {% if hospital.logo %}
+    <img src="{{ hospital.logo.url }}" alt="Hospital Logo">
+    {% endif %}
+    <h4>{{ hospital.name }}</h4>
+    {% if hospital.address %}<p>{{ hospital.address }}</p>{% endif %}
+    {% if hospital.telephone or hospital.email %}
+    <p>{% if hospital.telephone %}Tel: {{ hospital.telephone }}{% endif %}{% if hospital.telephone and hospital.email %}  |  {% endif %}{% if hospital.email %}Email: {{ hospital.email }}{% endif %}</p>
+    {% endif %}
+
+    <div class="print-patient-info">
+        <div><div class="label">Patient Name</div><div class="value">{{ patient.full_name }}</div></div>
+        <div><div class="label">Patient Number</div><div class="value">{{ patient.patient_number }}</div></div>
+        <div><div class="label">Visit Number</div><div class="value">{{ visit.visit_number }}</div></div>
+        <div><div class="label">Age / Gender</div><div class="value">{{ patient.age }} years / {{ patient.get_gender_display }}</div></div>
+        <div><div class="label">Phone</div><div class="value">{{ patient.phone }}</div></div>
+        <div><div class="label">Payment Type</div><div class="value">{{ patient.get_payment_type_display }}</div></div>
+        {% if requesting_doctor %}
+        <div><div class="label">Requesting Doctor</div><div class="value">{{ requesting_doctor.get_full_name }}</div></div>
+        {% endif %}
+        <div><div class="label">Date</div><div class="value">{% now "d M Y H:i" %}</div></div>
+    </div>
+    <hr class="print-divider">
+</div>
+
+<!-- Print Footer -->
+<div class="print-footer">
+    This laboratory report was generated electronically by the TENOCARE HOSPITAL Information Management System.
+</div>
+
+<!-- Top Bar -->
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <div>
+        <h4 class="mb-0">
+            <i class="bi bi-lab me-2"></i>Laboratory Worklist
+        </h4>
+        <small class="text-muted">
+            Visit: {{ visit.visit_number }} | Patient: {{ patient.patient_number }}
+        </small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'laboratory:lab-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Queue
+        </a>
+        <a href="{% url 'laboratory:lab-report-print' visit_id=visit.pk %}" target="_blank"
+           class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-printer me-1"></i>Print Report
+        </a>
+        <a href="{% url 'laboratory:lab-report-pdf' visit_id=visit.pk %}"
+           class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-download me-1"></i>Download PDF
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- LEFT COLUMN: Patient Summary -->
+    <div class="col-lg-4 mb-4">
+        <!-- Patient Card -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-person me-2"></i>Patient Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if patient.photo %}
+                    <img src="{{ patient.photo.url }}" alt="Photo"
+                         class="rounded-circle border border-2 border-primary"
+                         style="width: 90px; height: 90px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center border border-2 border-primary"
+                         style="width: 90px; height: 90px;">
+                        <i class="bi bi-person text-primary" style="font-size: 2.8rem;"></i>
+                    </div>
+                    {% endif %}
+                    <h5 class="mt-2 mb-0">{{ patient.full_name }}</h5>
+                    <span class="badge bg-primary">{{ patient.patient_number }}</span>
+                </div>
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="text-muted" style="width:45%">Age</td><td class="fw-semibold">{{ patient.age }} years</td></tr>
+                    <tr><td class="text-muted">Gender</td><td class="fw-semibold">{{ patient.get_gender_display }}</td></tr>
+                    <tr><td class="text-muted">Phone</td><td class="fw-semibold">{{ patient.phone }}</td></tr>
+                    <tr><td class="text-muted">Payment</td><td class="fw-semibold">{{ patient.get_payment_type_display }}</td></tr>
+                    {% if patient.patient_category %}
+                    <tr><td class="text-muted">Category</td><td><span class="badge bg-info">{{ patient.patient_category }}</span></td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        {% if requesting_doctor %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-2">
+                <small class="text-muted">Requesting Doctor</small>
+                <div class="fw-semibold"><i class="bi bi-person-badge me-1"></i>{{ requesting_doctor.get_full_name }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if clinical_indication %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-clipboard2-pulse me-2"></i>Clinical Indication</h6></div>
+            <div class="card-body py-2"><p class="mb-0 small">{{ clinical_indication|linebreaksbr }}</p></div>
+        </div>
+        {% endif %}
+
+        {% with triage=visit.triage_assessments.last %}
+        {% if triage %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-activity me-2"></i>Latest Vitals</h6></div>
+            <div class="card-body py-2">
+                <div class="vital-item"><span class="vital-label">Temperature</span><span class="vital-value">{{ triage.temperature }} C</span></div>
+                <div class="vital-item"><span class="vital-label">Blood Pressure</span><span class="vital-value">{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg</span></div>
+                <div class="vital-item"><span class="vital-label">Pulse</span><span class="vital-value">{{ triage.pulse }} bpm</span></div>
+                <div class="vital-item"><span class="vital-label">O2 Saturation</span><span class="vital-value">{{ triage.oxygen_saturation }}%</span></div>
+                <div class="vital-item"><span class="vital-label">Weight</span><span class="vital-value">{{ triage.weight }} kg</span></div>
+                <div class="vital-item"><span class="vital-label">Height</span><span class="vital-value">{{ triage.height }} cm</span></div>
+                <div class="mt-2 pt-2 border-top">
+                    <small class="text-muted fw-bold">Chief Complaint</small>
+                    <p class="mb-0 small">{{ triage.chief_complaint|linebreaksbr }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Progress Summary -->
+        <div class="card shadow-sm">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <small class="text-muted">Tests Requested</small><span class="badge bg-secondary">{{ total_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <small class="text-muted">Completed</small><span class="badge bg-success">{{ completed_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">Pending</small><span class="badge bg-warning text-dark">{{ pending_count }}</span>
+                </div>
+                {% if total_count > 0 %}
+                <div class="progress mt-3" style="height: 8px;">
+                    {% widthratio completed_count total_count 100 as pct %}
+                    <div class="progress-bar bg-success" style="width: {{ pct }}%"></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Lab Tests + Results Entry -->
+    <div class="col-lg-8">
+        <!-- Doctor's Requested Tests -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Doctor's Requested Laboratory Tests</h6>
+                {% if pending_count > 0 %}
+                <span class="badge bg-warning text-dark">{{ pending_count }} pending</span>
+                {% elif all_completed %}
+                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>All Complete</span>
+                {% endif %}
+            </div>
+            {% if lab_requests %}
+            <div class="card-body py-3">
+                {% for data in request_data %}
+                {% with req=data.req %}
+                <div class="requested-test d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="fw-semibold">
+                            {% if req.is_completed %}<i class="bi bi-check-circle-fill text-success me-2"></i>
+                            {% else %}<i class="bi bi-circle text-warning me-2"></i>{% endif %}
+                            {{ req.lab_test.name }}
+                        </span>
+                        <small class="text-muted ms-2">{{ req.lab_test.get_category_display }}</small>
+                        {% if data.template %}
+                        <span class="badge bg-primary ms-1"><i class="bi bi-table me-1"></i>Structured</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if req.result_status == 'FINAL' %}<span class="badge bg-success">FINAL</span>
+                        {% elif req.is_completed %}<span class="badge bg-info">Completed</span>
+                        {% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}
+                    </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">No Lab Tests Requested</h5>
+                <p class="text-muted">The doctor has not requested any laboratory tests for this visit.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Results Entry -->
+        {% if lab_requests %}
+        {% if pending_count > 0 %}
+        <form method="post" action="{% url 'laboratory:lab-save-draft' visit_id=visit.pk %}" id="lab-results-form">
+            {% csrf_token %}
+
+            {% for data in request_data %}
+            {% with req=data.req template=data.template parameters=data.parameters result_values=data.result_values %}
+
+            {% if not req.is_completed %}
+            {% if template %}
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- STRUCTURED TEMPLATE RESULT ENTRY           -->
+            <!-- ═══════════════════════════════════════════ -->
+            <div class="template-section mb-4 shadow-sm">
+                <div class="template-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0"><i class="bi bi-table me-2"></i>{{ req.lab_test.name }}</h6>
+                        <small class="opacity-75">{{ req.lab_test.get_category_display }}{% if req.lab_test.unit %} | {{ req.lab_test.unit }}{% endif %}</small>
+                    </div>
+                    <span class="badge bg-light text-dark">{{ parameters|length }} Parameters</span>
+                </div>
+
+                {% if template.instructions %}
+                <div class="bg-light px-3 py-2 border-bottom">
+                    <small><i class="bi bi-info-circle me-1"></i>{{ template.instructions }}</small>
+                </div>
+                {% endif %}
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:5%">#</th>
+                                <th style="width:22%">Parameter</th>
+                                <th style="width:13%">Unit</th>
+                                <th style="width:18%">Normal Range</th>
+                                <th style="width:22%">Result</th>
+                                <th style="width:12%">Status</th>
+                                <th style="width:8%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for param in parameters %}
+                            <tr class="param-row">
+                                <td class="text-center text-muted">{{ forloop.counter }}</td>
+                                <td><strong>{{ param.name }}</strong></td>
+                                <td><small class="text-muted">{{ param.unit|default:"--" }}</small></td>
+                                <td><small class="text-muted">{{ param.normal_range }}</small></td>
+                                <td>
+                                    <input type="text"
+                                           name="param_{{ req.pk }}_{{ param.id }}"
+                                           class="form-control form-control-sm param-result-input"
+                                           placeholder="--"
+                                           value="{{ result_values|default_if_none:'' }}"
+                                           data-min="{{ param.normal_min|default:'' }}"
+                                           data-max="{{ param.normal_max|default:'' }}"
+                                           data-param-id="{{ param.id }}">
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge flag-badge" data-for-param="{{ param.id }}"></span>
+                                </td>
+                                <td></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Overall Remarks for this test -->
+                <div class="px-3 py-2 bg-light border-top">
+                    <label class="form-label small fw-bold mb-1">Remarks / Comments</label>
+                    <input type="text" name="remarks_{{ req.pk }}" class="form-control form-control-sm"
+                           placeholder="Optional remarks for this test..." value="{{ req.remarks|default:'' }}">
+                </div>
+            </div>
+
+            {% else %}
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- FREE-TEXT RESULT ENTRY (no template)       -->
+            <!-- ═══════════════════════════════════════════ -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>{{ req.lab_test.name }}</h6>
+                    <span class="badge bg-secondary">Free Text</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Reference Range</label>
+                            <p class="form-control-plaintext">{{ req.lab_test.normal_range|default:"--" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Unit</label>
+                            <p class="form-control-plaintext">{{ req.lab_test.unit|default:"--" }}</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Result <span class="text-danger">*</span></label>
+                            <input type="text" name="result_{{ req.pk }}" class="form-control"
+                                   placeholder="Enter result..." required value="{{ req.result|default:'' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Remarks</label>
+                            <input type="text" name="remarks_{{ req.pk }}" class="form-control"
+                                   placeholder="Optional remarks..." value="{{ req.remarks|default:'' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% endif %}
+            {% endwith %}
+            {% endfor %}
+
+            <!-- Overall Laboratory Comment -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-chat-left-text me-2"></i>Overall Laboratory Comment</h6>
+                </div>
+                <div class="card-body">
+                    <textarea name="overall_remarks" class="form-control" rows="3"
+                              placeholder="Optional overall comment for this visit..."></textarea>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card shadow-sm no-print mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3 justify-content-center">
+                        <button type="submit" class="btn btn-outline-primary btn-save-draft">
+                            <i class="bi bi-save me-2"></i>Save Draft
+                        </button>
+                        <button type="submit" formaction="{% url 'laboratory:lab-finalize' visit_id=visit.pk %}"
+                                onclick="return confirm('Finalize all results and send to the doctor for review?');"
+                                class="btn btn-success btn-lg btn-send-doctor">
+                            <i class="bi bi-arrow-return-right me-2"></i>SEND RESULTS BACK TO DOCTOR
+                        </button>
+                    </div>
+                    <p class="text-muted text-center mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Enter results for all tests, then click <strong>"SEND RESULTS BACK TO DOCTOR"</strong>.
+                    </p>
+                </div>
+            </div>
+        </form>
+
+        {% else %}
+        <!-- All tests completed -->
+        <form method="post" action="{% url 'laboratory:lab-complete-all' visit_id=visit.pk %}"
+              onsubmit="return confirm('Send all results to the doctor for review?');">
+            {% csrf_token %}
+            <div class="card shadow-sm no-print">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3">All tests completed</h5>
+                    <p class="text-muted mb-3">All laboratory tests have been completed and are ready for doctor review.</p>
+                    <div class="d-flex flex-wrap gap-2 justify-content-center">
+                        <button type="submit" class="btn btn-success btn-lg btn-send-doctor">
+                            <i class="bi bi-arrow-return-right me-2"></i>SEND RESULTS BACK TO DOCTOR
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+        {% endif %}
+
+        <!-- Bottom Action Bar: Print + Download -->
+        {% if completed_count > 0 %}
+        <div class="card shadow-sm no-print mb-4">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="bi bi-printer me-2"></i>Report Actions</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'laboratory:lab-report-print' visit_id=visit.pk %}" target="_blank"
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-printer me-1"></i>Print Report (Browser)
+                    </a>
+                    <a href="{% url 'laboratory:lab-report-pdf' visit_id=visit.pk %}"
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-download me-1"></i>Download PDF
+                    </a>
+                </div>
+                <small class="text-muted d-block mt-2">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Print opens in a new tab. Download saves a PDF file to your computer.
+                </small>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-flagging for structured parameters
+    document.querySelectorAll('.param-result-input').forEach(function(input) {
+        function checkFlag() {
+            var min = input.dataset.min;
+            var max = input.dataset.max;
+            var paramId = input.dataset.paramId;
+            var badge = document.querySelector('[data-for-param="' + paramId + '"]');
+            if (!badge) return;
+
+            var val = parseFloat(input.value);
+            if (isNaN(val) || min === '' || max === '') {
+                badge.textContent = '';
+                badge.className = 'badge flag-badge';
+                return;
+            }
+
+            min = parseFloat(min);
+            max = parseFloat(max);
+
+            if (val < min) {
+                badge.textContent = 'LOW';
+                badge.className = 'badge flag-badge flag-low';
+            } else if (val > max) {
+                badge.textContent = 'HIGH';
+                badge.className = 'badge flag-badge flag-high';
+            } else {
+                badge.textContent = 'NORMAL';
+                badge.className = 'badge flag-badge flag-normal';
+            }
+        }
+
+        input.addEventListener('input', checkFlag);
+        // Run on load for pre-filled values
+        if (input.value.trim()) checkFlag();
+    });
+});
+</script>
+{% endblock %}

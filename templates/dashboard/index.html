@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Welcome -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h5>
+            <small class="text-muted">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</small>
+        </div>
+        <span class="badge bg-primary fs-6">{{ total_visits }} Total Visits</span>
+    </div>
+
+    <!-- Row 1: Key Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted small mb-1">Total Patients</p>
+                            <h3 class="fw-bold mb-0 text-primary">{{ total_patients }}</h3>
+                        </div>
+                        <span class="bg-primary bg-opacity-10 rounded p-2 fs-5"><i class="bi bi-people-fill text-primary"></i></span>
+                    </div>
+                    <small class="text-muted">+{{ patients_today }} today</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted small mb-1">Waiting Triage</p>
+                            <h3 class="fw-bold mb-0 text-warning">{{ waiting_triage }}</h3>
+                        </div>
+                        <span class="bg-warning bg-opacity-10 rounded p-2 fs-5"><i class="bi bi-clipboard-pulse text-warning"></i></span>
+                    </div>
+                    <small class="text-muted">{{ waiting_doctor }} waiting for doctor</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted small mb-1">Admitted</p>
+                            <h3 class="fw-bold mb-0 text-info">{{ admitted_patients }}</h3>
+                        </div>
+                        <span class="bg-info bg-opacity-10 rounded p-2 fs-5"><i class="bi bi-hospital-fill text-info"></i></span>
+                    </div>
+                    <small class="text-muted">Beds: {{ bed_occupancy }} ({{ bed_occupancy_pct }}%)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted small mb-1">Revenue Today</p>
+                            <h3 class="fw-bold mb-0 text-success">KSh {{ revenue_today|floatformat:0|default:"0" }}</h3>
+                        </div>
+                        <span class="bg-success bg-opacity-10 rounded p-2 fs-5"><i class="bi bi-cash-stack text-success"></i></span>
+                    </div>
+                    <small class="text-muted">KSh {{ total_outstanding|floatformat:0 }} outstanding</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Queues -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm stat-card h-100 border-start border-4 border-warning">
+                <div class="card-body d-flex align-items-center">
+                    <i class="bi bi-capsule fs-1 text-warning me-3"></i>
+                    <div>
+                        <h4 class="fw-bold mb-0">{{ waiting_pharmacy }}</h4>
+                        <small class="text-muted">Pharmacy Queue</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm stat-card h-100 border-start border-4 border-danger">
+                <div class="card-body d-flex align-items-center">
+                    <i class="bi bi-lab fs-1 text-danger me-3"></i>
+                    <div>
+                        <h4 class="fw-bold mb-0">{{ waiting_lab }}</h4>
+                        <small class="text-muted">Lab Queue</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm stat-card h-100 border-start border-4 border-info">
+                <div class="card-body d-flex align-items-center">
+                    <i class="bi bi-camera-reels fs-1 text-info me-3"></i>
+                    <div>
+                        <h4 class="fw-bold mb-0">{{ waiting_xray|add:waiting_ultrasound }}</h4>
+                        <small class="text-muted">Imaging Queue</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm stat-card h-100 border-start border-4 border-success">
+                <div class="card-body d-flex align-items-center">
+                    <i class="bi bi-receipt fs-1 text-success me-3"></i>
+                    <div>
+                        <h4 class="fw-bold mb-0">{{ pending_invoices }}</h4>
+                        <small class="text-muted">Pending Invoices</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: Charts -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Weekly Visit Trend</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="weeklyChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Visit Status</h6>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 4: Revenue Chart + Recent Activity -->
+    <div class="row g-3">
+        <div class="col-xl-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h6 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Revenue Trend (7 Days)</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h6 class="mb-0"><i class="bi bi-list-stars me-2"></i>Recent Activity</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for activity in recent_activities %}
+                        <div class="list-group-item d-flex align-items-center py-2 px-3 border-0">
+                            <span class="badge bg-{{ activity.color }} bg-opacity-10 p-2 me-3">
+                                <i class="bi {{ activity.icon }} text-{{ activity.color }}"></i>
+                            </span>
+                            <div class="flex-grow-1">
+                                <small>{{ activity.text }}</small>
+                            </div>
+                            <small class="text-muted ms-2">{{ activity.time|timesince }} ago</small>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            <small>No recent activity</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    const textColor = isDark ? '#adb5bd' : '#6c757d';
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+    // Weekly Visit Chart
+    const weeklyCtx = document.getElementById('weeklyChart');
+    if (weeklyCtx) {
+        new Chart(weeklyCtx, {
+            type: 'line',
+            data: {
+                labels: {{ weekly_labels|safe }},
+                datasets: [{
+                    label: 'Visits',
+                    data: {{ weekly_visits|safe }},
+                    borderColor: '#007A3D',
+                    backgroundColor: 'rgba(0,122,61,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                    x: { grid: { display: false }, ticks: { color: textColor } }
+                }
+            }
+        });
+    }
+
+    // Status Pie Chart
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ visit_status_labels|safe }},
+                datasets: [{
+                    data: {{ visit_status_data|safe }},
+                    backgroundColor: ['#007A3D', '#FFC107', '#DC3545', '#0D6EFD', '#6F42C1', '#20C997', '#FD7E14', '#0dcaf0'],
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 12, padding: 8, font: { size: 11 }, color: textColor }
+                    }
+                }
+            }
+        });
+    }
+
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx) {
+        new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ weekly_labels|safe }},
+                datasets: [{
+                    label: 'Revenue (KSh )',
+                    data: {{ weekly_revenue|safe }},
+                    backgroundColor: 'rgba(0,122,61,0.7)',
+                    borderColor: '#007A3D',
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                    x: { grid: { display: false }, ticks: { color: textColor } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Ward Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">
+            <i class="bi bi-door-open me-2"></i>Ward Management
+        </h4>
+        <a href="{% url 'admission:admission-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Admission
+        </a>
+    </div>
+
+    <!-- Ward Summary Cards -->
+    <div class="row g-3 mb-4">
+        {% for ward in wards %}
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title mb-1">{{ ward.name }}</h5>
+                            <span class="badge bg-info">{{ ward.get_ward_type_display }}</span>
+                        </div>
+                        <div class="text-end">
+                            <h6 class="text-primary mb-0">KSh {{ ward.price_per_night|floatformat:0 }}/night</h6>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <small class="text-muted">Rooms: <strong>{{ ward.rooms.count }}</strong></small>
+                        </div>
+                        <div>
+                            <small class="text-success">Available: <strong>{{ ward.available_bed_count }}</strong></small>
+                            <small class="text-muted ms-2">Total: <strong>{{ ward.total_bed_count }}</strong></small>
+                        </div>
+                    </div>
+                    <a href="{% url 'admission:ward-edit' ward.id %}" class="btn btn-outline-primary btn-sm mt-2">
+                        <i class="bi bi-pencil me-1"></i>Edit Ward
+                    </a>
+
+                    <!-- Rooms List -->
+                    {% if ward.rooms.all %}
+                    <div class="mt-3">
+                        <h6 class="text-muted">Rooms</h6>
+                        {% for room in ward.rooms.all %}
+                        <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                            <div>
+                                <strong>Room {{ room.room_number }}</strong>
+                                <small class="text-muted">({{ room.get_room_type_display }})</small>
+                            </div>
+                            <div>
+                                {% for bed in room.beds.all %}
+                                <span class="badge {% if bed.is_occupied %}bg-danger{% else %}bg-success{% endif %} me-1">
+                                    {{ bed.bed_number }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add New Ward -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <i class="bi bi-plus-circle me-2"></i>Add New Ward
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'admission:ward-create' %}">
+                {% csrf_token %}
+                {{ ward_form|crispy }}
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Create Ward
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add New Room -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <i class="bi bi-plus-circle me-2"></i>Add New Room
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'admission:room-create' %}">
+                {% csrf_token %}
+                {{ room_form|crispy }}
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-plus-circle me-1"></i>Create Room
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add New Bed -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <i class="bi bi-plus-circle me-2"></i>Add New Bed
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'admission:bed-create' %}">
+                {% csrf_token %}
+                {{ bed_form|crispy }}
+                <button type="submit" class="btn btn-info text-white">
+                    <i class="bi bi-plus-circle me-1"></i>Create Bed
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

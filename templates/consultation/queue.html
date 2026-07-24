@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static visit_tags %}
+
+{% block title %}Doctor Queue - THHIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-chat-dots me-2"></i>Doctor's Queue
+        </h5>
+        <span class="badge bg-primary fs-6">{{ queue_count }} patient{{ queue_count|pluralize }}</span>
+    </div>
+
+    {% if visits %}
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th></th>
+                        <th>Patient</th>
+                        <th>Visit #</th>
+                        <th>Status</th>
+                        <th>Waiting Since</th>
+                        <th>Chief Complaint</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in visits %}
+                    <tr>
+                        <td>
+                            {% if visit.patient.photo %}
+                                <img src="{{ visit.patient.photo.url }}" alt="" class="rounded-circle" style="width:40px;height:40px;object-fit:cover;">
+                            {% else %}
+                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                                    <i class="bi bi-person text-white"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ visit.patient.full_name }}</strong><br>
+                            <small class="text-muted">{{ visit.patient.patient_number }}</small>
+                        </td>
+                        <td><small>{{ visit.visit_number }}</small></td>
+                        <td>
+                            {% visit_status_badge visit %}
+                        </td>
+                        <td><small class="text-muted">{{ visit.created_at|timesince }} ago</small></td>
+                        <td>
+                            {% with assessment=visit.triage_assessments.last %}
+                                {% if assessment %}
+                                    {{ assessment.chief_complaint|truncatewords:10 }}
+                                {% else %}
+                                    <span class="text-muted fst-italic">N/A</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-end">
+                            {% if visit.status == "IN_CONSULTATION" %}
+                                {% with active_consultation=visit.consultations.all|dictsortreversed:"started_at"|first %}
+                                {% if active_consultation %}
+                                <a href="{% url 'consultation:conduct-consultation' active_consultation.pk %}" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Resume Consultation
+                                </a>
+                                {% else %}
+                                <form method="post" action="{% url 'consultation:start-consultation' visit.pk %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-chat-dots me-1"></i>Start Consultation
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% endwith %}
+                            {% elif visit.status == "WAITING_DOCTOR_REVIEW" %}
+                                <form method="post" action="{% url 'consultation:start-consultation' visit.pk %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-warning btn-sm">
+                                        <i class="bi bi-arrow-return-left me-1"></i>Review Results
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="post" action="{% url 'consultation:start-consultation' visit.pk %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-chat-dots me-1"></i>Start Consultation
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-check-circle display-1 text-muted"></i>
+        <h4 class="mt-3">No patients waiting</h4>
+        <p class="text-muted">All patients have been served or there are no new visits.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

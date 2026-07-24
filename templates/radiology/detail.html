@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Radiology - {{ visit.visit_number }} - THHIMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vital-item { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #f0f0f0; }
+    .vital-label { color: #6c757d; font-size: 0.8rem; }
+    .vital-value { font-weight: 600; font-size: 0.85rem; }
+    .requested-service { padding: 6px 12px; border-left: 3px solid #198754; background: #f8f9fa; margin-bottom: 6px; border-radius: 0 4px 4px 0; }
+    .btn-send-doctor { font-size: 1rem; padding: 12px 30px; font-weight: 600; letter-spacing: 0.5px; }
+    .finding-entry { border: 1px solid #dee2e6; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: #fafafa; }
+    .finding-entry h6 { color: #0d6efd; margin-bottom: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">
+            <i class="bi bi-camera-reels me-2"></i>Radiology Worklist
+        </h4>
+        <small class="text-muted">
+            Visit: {{ visit.visit_number }} | Patient: {{ patient.patient_number }}
+        </small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'radiology:radiology-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Queue
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- ============================================== -->
+    <!-- LEFT COLUMN: Patient Summary                    -->
+    <!-- ============================================== -->
+    <div class="col-lg-4 mb-4">
+        <!-- Patient Info -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-person me-2"></i>Patient Information
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if patient.photo %}
+                    <img src="{{ patient.photo.url }}" alt="Photo"
+                         class="rounded-circle border border-2 border-primary"
+                         style="width: 90px; height: 90px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center border border-2 border-primary"
+                         style="width: 90px; height: 90px;">
+                        <i class="bi bi-person text-primary" style="font-size: 2.8rem;"></i>
+                    </div>
+                    {% endif %}
+                    <h5 class="mt-2 mb-0">{{ patient.full_name }}</h5>
+                    <span class="badge bg-primary">{{ patient.patient_number }}</span>
+                </div>
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="text-muted" style="width:40%">Age</td><td class="fw-semibold">{{ patient.age }} years</td></tr>
+                    <tr><td class="text-muted">Gender</td><td class="fw-semibold">{{ patient.get_gender_display }}</td></tr>
+                    <tr><td class="text-muted">Phone</td><td class="fw-semibold">{{ patient.phone }}</td></tr>
+                    <tr><td class="text-muted">Payment</td><td class="fw-semibold">{{ patient.get_payment_type_display }}</td></tr>
+                    {% if patient.patient_category %}
+                    <tr><td class="text-muted">Category</td><td><span class="badge bg-info">{{ patient.patient_category }}</span></td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Requesting Doctor -->
+        {% if requesting_doctor %}
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <small class="text-muted">Requesting Doctor</small>
+                <div class="fw-semibold">
+                    <i class="bi bi-person-badge me-1"></i>{{ requesting_doctor.get_full_name }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Doctor's Clinical Indication -->
+        {% if clinical_indication %}
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-clipboard2-pulse me-2"></i>Clinical Indication</h6>
+            </div>
+            <div class="card-body py-2">
+                <p class="mb-0 small">{{ clinical_indication|linebreaksbr }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Latest Vitals -->
+        {% with triage=visit.triage_assessments.last %}
+        {% if triage %}
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Latest Vitals</h6>
+            </div>
+            <div class="card-body py-2">
+                <div class="vital-item">
+                    <span class="vital-label">Temperature</span>
+                    <span class="vital-value">{{ triage.temperature }} C</span>
+                </div>
+                <div class="vital-item">
+                    <span class="vital-label">Blood Pressure</span>
+                    <span class="vital-value">{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg</span>
+                </div>
+                <div class="vital-item">
+                    <span class="vital-label">Pulse</span>
+                    <span class="vital-value">{{ triage.pulse }} bpm</span>
+                </div>
+                <div class="vital-item">
+                    <span class="vital-label">O2 Saturation</span>
+                    <span class="vital-value">{{ triage.oxygen_saturation }}%</span>
+                </div>
+                <div class="vital-item">
+                    <span class="vital-label">Weight</span>
+                    <span class="vital-value">{{ triage.weight }} kg</span>
+                </div>
+                <div class="vital-item">
+                    <span class="vital-label">Height</span>
+                    <span class="vital-value">{{ triage.height }} cm</span>
+                </div>
+                <div class="mt-2 pt-2 border-top">
+                    <small class="text-muted fw-bold">Chief Complaint</small>
+                    <p class="mb-0 small">{{ triage.chief_complaint|linebreaksbr }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Progress Summary -->
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <small class="text-muted">Imaging Requested</small>
+                    <span class="badge bg-secondary">{{ radiology_requests.count }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <small class="text-muted">Completed</small>
+                    <span class="badge bg-success">{{ completed_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">Pending</small>
+                    <span class="badge bg-warning text-dark">{{ pending_count }}</span>
+                </div>
+                {% if radiology_requests.count > 0 %}
+                <div class="progress mt-3" style="height: 8px;">
+                    {% widthratio completed_count radiology_requests.count 100 as pct %}
+                    <div class="progress-bar bg-success" style="width: {{ pct }}%"></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- RIGHT COLUMN: Imaging Worklist                  -->
+    <!-- ============================================== -->
+    <div class="col-lg-8">
+        <!-- Doctor's Requested Imaging -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi bi-list-check me-2"></i>Doctor's Requested Imaging
+                </h6>
+                {% if pending_count > 0 %}
+                <span class="badge bg-warning text-dark">{{ pending_count }} pending</span>
+                {% elif completed_count > 0 %}
+                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>All Complete</span>
+                {% endif %}
+            </div>
+
+            {% if radiology_requests %}
+            <div class="card-body py-3">
+                {% for req in radiology_requests %}
+                <div class="requested-service d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="fw-semibold">
+                            {% if req.is_completed %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            {% else %}
+                                <i class="bi bi-circle text-warning me-2"></i>
+                            {% endif %}
+                            {{ req.radiology_service.name }}
+                        </span>
+                        <small class="text-muted ms-2">{{ req.radiology_service.get_service_type_display }}</small>
+                        {% if req.radiology_service.body_part %}
+                            <small class="text-muted ms-1">({{ req.radiology_service.body_part }})</small>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if req.result_status == 'FINAL' %}
+                            <span class="badge bg-success">FINAL</span>
+                        {% elif req.is_completed %}
+                            <span class="badge bg-info">Completed</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">No Imaging Requested</h5>
+                <p class="text-muted">The doctor has not requested any imaging for this visit.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Findings Entry -->
+        {% if radiology_requests %}
+        {% if pending_count > 0 %}
+        <form method="post" action="{% url 'radiology:radiology-save-draft' visit_id=visit.pk %}" id="radiology-results-form" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {% for req in radiology_requests %}
+            {% if not req.is_completed %}
+            <div class="finding-entry">
+                <h6>
+                    <i class="bi bi-camera-reels me-1"></i>
+                    {{ req.radiology_service.name }}
+                    <small class="text-muted">({{ req.radiology_service.get_service_type_display }})</small>
+                    {% if req.radiology_service.body_part %}
+                        <small class="text-muted"> - {{ req.radiology_service.body_part }}</small>
+                    {% endif %}
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Findings <span class="text-danger">*</span></label>
+                        <textarea name="findings_{{ req.pk }}" class="form-control" rows="4"
+                                  placeholder="Enter radiological findings..." required>{{ req.findings|default:'' }}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Impression</label>
+                        <textarea name="impression_{{ req.pk }}" class="form-control" rows="3"
+                                  placeholder="Enter impression...">{{ req.impression|default:'' }}</textarea>
+                        <div class="mt-3">
+                            <label class="form-label fw-bold small">Upload Image (optional)</label>
+                            <input type="file" name="image_{{ req.pk }}" class="form-control form-control-sm"
+                                   accept="image/*">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            <!-- Action Buttons -->
+            <div class="card shadow-sm no-print mt-3">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3 justify-content-center">
+                        <!-- Save Draft -->
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-save me-2"></i>Save Draft
+                        </button>
+
+                        <!-- Finalize & Send to Doctor -->
+                        <button type="submit" formaction="{% url 'radiology:radiology-finalize' visit_id=visit.pk %}"
+                                onsubmit="return confirm('Finalize all reports and send to the doctor for review?');"
+                                class="btn btn-success btn-lg btn-send-doctor">
+                            <i class="bi bi-arrow-return-right me-2"></i>SEND RESULTS BACK TO DOCTOR
+                        </button>
+                    </div>
+
+                    <p class="text-muted text-center mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Enter findings for all imaging, then click <strong>"SEND RESULTS BACK TO DOCTOR"</strong>.
+                    </p>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'radiology:radiology-complete-all' visit_id=visit.pk %}"
+              onsubmit="return confirm('Send all results to the doctor for review?');">
+            {% csrf_token %}
+            <div class="card shadow-sm no-print">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3">All imaging completed</h5>
+                    <p class="text-muted mb-3">All imaging reports have been completed and are ready for doctor review.</p>
+                    <button type="submit" class="btn btn-success btn-lg btn-send-doctor">
+                        <i class="bi bi-arrow-return-right me-2"></i>SEND RESULTS BACK TO DOCTOR
+                    </button>
+                </div>
+            </div>
+        </form>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+# Environment
+.env
+*.pyc
+__pycache__/
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Media
+media/
+
+# Static files
+staticfiles/
+
+# Logs
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+venv/
+.venv/
+*.egg

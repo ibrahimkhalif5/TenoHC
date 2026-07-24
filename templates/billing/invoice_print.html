@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{ invoice.invoice_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { font-size: 10px; margin: 0; padding: 0; }
+            .invoice-wrapper { box-shadow: none; border: 2px solid #000; }
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #212529;
+            font-size: 10px;
+        }
+        .invoice-wrapper {
+            max-width: 780px;
+            margin: 20px auto;
+            border: 2px solid #0d6efd;
+            border-radius: 6px;
+            padding: 20px 24px;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(13,110,253,0.08);
+        }
+
+        /* ── Header ── */
+        .inv-header {
+            text-align: center;
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .inv-header::after {
+            content: '';
+            display: block;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #0d6efd 20%, #0d6efd 80%, transparent);
+            margin-top: 2px;
+        }
+        .inv-header img { max-height: 55px; margin-bottom: 4px; }
+        .inv-header .hosp-name { font-size: 17px; font-weight: 800; color: #1a1d21; letter-spacing: 0.5px; }
+        .inv-header .hosp-info { font-size: 9px; color: #6c757d; margin-top: 2px; }
+
+        /* ── Title Banner ── */
+        .inv-title {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        .inv-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 5px 12px;
+            background: #f8f9fa;
+            font-size: 9.5px;
+        }
+        .inv-title-row .inv-num { font-weight: 700; color: #0d6efd; }
+        .inv-title-row .inv-date { color: #495057; }
+
+        /* ── Section Headings ── */
+        .section-heading {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+            padding: 4px 10px;
+            border-radius: 3px;
+            margin: 12px 0 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section-heading i { font-size: 10px; }
+
+        /* ── KV Grid ── */
+        .kv-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 9.5px;
+            overflow: hidden;
+        }
+        .kv-item {
+            display: flex;
+            gap: 5px;
+            padding: 3px 8px;
+            border-bottom: 1px solid #e9ecef;
+            border-right: 1px solid #e9ecef;
+        }
+        .kv-item:nth-child(even) { border-right: none; }
+        .kv-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 110px;
+            background: #f8f9fa;
+            padding: 1px 5px;
+            border-radius: 2px;
+        }
+        .kv-value { color: #212529; padding: 1px 0; }
+
+        /* ── Data Tables ── */
+        .data-table {
+            font-size: 8.5px;
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .data-table th {
+            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+            color: #fff;
+            padding: 4px 5px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 8.5px;
+            border: 1px solid #0b5ed7;
+        }
+        .data-table td {
+            padding: 3px 5px;
+            border: 1px solid #dee2e6;
+        }
+        .data-table tr:nth-child(even) { background: #f8f9fa; }
+
+        /* ── Summary Table ── */
+        .summary-table {
+            width: 55%;
+            margin-left: auto;
+            border-collapse: collapse;
+            font-size: 9.5px;
+            border: 2px solid #0d6efd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .summary-table td {
+            padding: 3px 8px;
+            border: 1px solid #dee2e6;
+        }
+        .summary-table .label-cell {
+            background: #f8f9fa;
+            font-weight: 600;
+            width: 55%;
+        }
+        .summary-table .total-row {
+            background: linear-gradient(135deg, #e7f1ff, #d0e0ff);
+            font-weight: 700;
+            font-size: 10px;
+            border-top: 2px solid #0d6efd;
+        }
+        .summary-table .balance-row {
+            background: #fff5f5;
+            font-weight: 700;
+            border-top: 2px solid #dc3545;
+        }
+        .summary-table .paid-row { background: #f0fff4; }
+        .summary-table .rebate-row { background: #f0fff4; color: #198754; }
+        .summary-table .final-row {
+            background: linear-gradient(135deg, #f0fff4, #d4edda);
+            font-weight: 800;
+            font-size: 11px;
+            border-top: 2px solid #198754;
+        }
+
+        /* ── Footer ── */
+        .inv-footer {
+            text-align: center;
+            font-size: 8px;
+            color: #8b919a;
+            font-style: italic;
+            margin-top: 14px;
+            border-top: 2px solid #0d6efd;
+            padding-top: 8px;
+        }
+        .inv-footer::before {
+            content: '';
+            display: block;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #0d6efd 20%, #0d6efd 80%, transparent);
+            margin-bottom: 6px;
+        }
+
+        /* ── Signature Area ── */
+        .sig-area {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 18px;
+            padding-top: 8px;
+            font-size: 9px;
+            color: #495057;
+        }
+        .sig-box {
+            width: 30%;
+            text-align: center;
+        }
+        .sig-line {
+            border-top: 1px solid #212529;
+            margin-top: 35px;
+            padding-top: 4px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-wrapper">
+
+        <!-- Hospital Header -->
+        <div class="inv-header">
+            {% if data.hospital.logo %}
+            <img src="{{ data.hospital.logo.url }}" alt="Logo">
+            {% endif %}
+            <div class="hosp-name">{{ data.hospital.name }}</div>
+            {% if data.hospital.address %}
+            <div class="hosp-info">{{ data.hospital.address }}</div>
+            {% endif %}
+            <div class="hosp-info">
+                {% if data.hospital.telephone %}Tel: {{ data.hospital.telephone }}{% endif %}
+                {% if data.hospital.telephone and data.hospital.email %} | {% endif %}
+                {% if data.hospital.email %}Email: {{ data.hospital.email }}{% endif %}
+            </div>
+        </div>
+
+        <!-- Invoice Title -->
+        <div class="inv-title">
+            <i class="bi bi-receipt-cutoff me-1"></i> Patient Invoice
+        </div>
+
+        <!-- Invoice Number & Date Row -->
+        <div class="inv-title-row">
+            <span class="inv-num"><i class="bi bi-hash"></i> {{ invoice.invoice_number }}</span>
+            <span class="inv-date"><i class="bi bi-calendar3 me-1"></i>{{ invoice.created_at|date:"d M Y H:i" }}</span>
+            <span>
+                {% if invoice.status == "PAID" %}<span class="badge bg-success">PAID</span>
+                {% elif invoice.status == "PARTIALLY_PAID" %}<span class="badge bg-info">PARTIAL</span>
+                {% elif invoice.status == "PENDING" %}<span class="badge bg-warning text-dark">PENDING</span>
+                {% else %}<span class="badge bg-secondary">{{ invoice.get_status_display }}</span>{% endif %}
+            </span>
+        </div>
+
+        <!-- Invoice & Patient Info -->
+        <div class="section-heading"><i class="bi bi-person-lines-fill"></i> Invoice & Patient Information</div>
+        <div class="kv-grid">
+            <div class="kv-item"><span class="kv-label">Invoice Number</span><span class="kv-value">{{ invoice.invoice_number }}</span></div>
+            <div class="kv-item"><span class="kv-label">Patient Name</span><span class="kv-value">{{ data.patient.full_name }}</span></div>
+            <div class="kv-item"><span class="kv-label">Visit Number</span><span class="kv-value">{{ invoice.visit.visit_number }}</span></div>
+            <div class="kv-item"><span class="kv-label">Patient Number</span><span class="kv-value">{{ data.patient.patient_number }}</span></div>
+            <div class="kv-item"><span class="kv-label">Invoice Date</span><span class="kv-value">{{ invoice.created_at|date:"d M Y H:i" }}</span></div>
+            <div class="kv-item"><span class="kv-label">Gender</span><span class="kv-value">{{ data.patient.get_gender_display }}</span></div>
+            <div class="kv-item"><span class="kv-label">Cashier</span><span class="kv-value">{{ invoice.created_by.get_full_name|default:"System" }}</span></div>
+            <div class="kv-item"><span class="kv-label">Age</span><span class="kv-value">{{ data.patient.age }} years</span></div>
+            <div class="kv-item"><span class="kv-label">Payment Status</span><span class="kv-value">
+                {% if invoice.status == "PAID" %}<span class="badge bg-success">Paid</span>
+                {% elif invoice.status == "PARTIALLY_PAID" %}<span class="badge bg-info">Partially Paid</span>
+                {% elif invoice.status == "PENDING" %}<span class="badge bg-warning text-dark">Pending</span>
+                {% else %}<span class="badge bg-secondary">{{ invoice.get_status_display }}</span>{% endif %}
+            </span></div>
+            <div class="kv-item"><span class="kv-label">Phone</span><span class="kv-value">{{ data.patient.phone }}</span></div>
+            <div class="kv-item"><span class="kv-label">National ID</span><span class="kv-value">{{ data.patient.national_id|default:"—" }}</span></div>
+            <div class="kv-item"><span class="kv-label">Patient Category</span><span class="kv-value">{{ data.patient.patient_category|default:"—" }}</span></div>
+            <div class="kv-item"><span class="kv-label">Payment Type</span><span class="kv-value">{{ data.patient.get_payment_type_display }}</span></div>
+            <div class="kv-item"><span class="kv-label">Visit Type</span><span class="kv-value">{{ data.visit_type }}</span></div>
+            <div class="kv-item"><span class="kv-label">Attending Doctor</span><span class="kv-value">{{ data.doctor_name|default:"—" }}</span></div>
+        </div>
+
+        <!-- Visit Info -->
+        <div class="section-heading"><i class="bi bi-calendar-check"></i> Visit Information</div>
+        <div class="kv-grid">
+            <div class="kv-item"><span class="kv-label">Registration Date</span><span class="kv-value">{{ invoice.visit.visit_date|date:"d M Y" }}</span></div>
+            <div class="kv-item"><span class="kv-label">Consultation Date</span><span class="kv-value">{% if data.consultation %}{{ data.consultation.created_at|date:"d M Y" }}{% else %}—{% endif %}</span></div>
+            {% if data.admission %}
+            <div class="kv-item"><span class="kv-label">Admission Date</span><span class="kv-value">{{ data.admission.admission_date|date:"d M Y" }}</span></div>
+            <div class="kv-item"><span class="kv-label">Discharge Date</span><span class="kv-value">{% if data.admission.discharge_date %}{{ data.admission.discharge_date|date:"d M Y" }}{% else %}Currently Admitted{% endif %}</span></div>
+            <div class="kv-item"><span class="kv-label">Ward</span><span class="kv-value">{{ data.admission.ward.name }}</span></div>
+            <div class="kv-item"><span class="kv-label">Room / Bed</span><span class="kv-value">{{ data.admission.room.room_number }} / {{ data.admission.bed.bed_number }}</span></div>
+            {% endif %}
+        </div>
+
+        <!-- Diagnosis -->
+        {% if data.primary_diagnosis or data.secondary_diagnosis %}
+        <div class="section-heading"><i class="bi bi-clipboard2-pulse"></i> Diagnosis</div>
+        <div class="kv-grid">
+            <div class="kv-item"><span class="kv-label">Primary Diagnosis</span><span class="kv-value">{{ data.primary_diagnosis|default:"—" }}</span></div>
+            {% if data.secondary_diagnosis %}
+            <div class="kv-item"><span class="kv-label">Secondary Diagnosis</span><span class="kv-value">{{ data.secondary_diagnosis }}</span></div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Services Provided -->
+        {% if data.services %}
+        <div class="section-heading"><i class="bi bi-gear-wide-connected"></i> Services Provided</div>
+        <table class="data-table">
+            <thead><tr><th>Date</th><th>Department</th><th>Service</th><th>Qty</th><th class="text-end">Unit Price</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+                {% for s in data.services %}
+                <tr><td>{{ s.date }}</td><td>{{ s.department }}</td><td>{{ s.service }}</td><td class="text-center">{{ s.quantity }}</td><td class="text-end">KSh {{ s.unit_price|floatformat:2 }}</td><td class="text-end fw-bold">KSh {{ s.amount|floatformat:2 }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Lab Tests -->
+        {% if data.lab_tests %}
+        <div class="section-heading"><i class="bi bi-lightning"></i> Laboratory Tests</div>
+        <table class="data-table">
+            <thead><tr><th>Test Name</th><th>Qty</th><th class="text-end">Unit Price</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for l in data.lab_tests %}
+                <tr><td>{{ l.test_name }}</td><td class="text-center">{{ l.quantity }}</td><td class="text-end">KSh {{ l.unit_price|floatformat:2 }}</td><td class="text-end fw-bold">KSh {{ l.amount|floatformat:2 }}</td><td>{{ l.status }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Radiology -->
+        {% if data.radiology %}
+        <div class="section-heading"><i class="bi bi-camera"></i> Radiology / Imaging</div>
+        <table class="data-table">
+            <thead><tr><th>Service</th><th>Qty</th><th class="text-end">Unit Price</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+                {% for r in data.radiology %}
+                <tr><td>{{ r.service }}</td><td class="text-center">{{ r.quantity }}</td><td class="text-end">KSh {{ r.unit_price|floatformat:2 }}</td><td class="text-end fw-bold">KSh {{ r.amount|floatformat:2 }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Medications -->
+        {% if data.medications %}
+        <div class="section-heading"><i class="bi bi-capsule"></i> Medications</div>
+        <table class="data-table">
+            <thead><tr><th>Medicine</th><th>Dosage</th><th>Qty</th><th class="text-end">Unit Price</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+                {% for m in data.medications %}
+                <tr><td>{{ m.medicine_name }}</td><td>{{ m.dosage|default:"—" }}</td><td class="text-center">{{ m.quantity }}</td><td class="text-end">KSh {{ m.unit_price|floatformat:2 }}</td><td class="text-end fw-bold">KSh {{ m.amount|floatformat:2 }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Ward Info -->
+        {% if data.ward %}
+        <div class="section-heading"><i class="bi bi-hospital"></i> Ward Information</div>
+        <div class="kv-grid">
+            <div class="kv-item"><span class="kv-label">Ward Type</span><span class="kv-value">{{ data.ward.ward_type }}</span></div>
+            <div class="kv-item"><span class="kv-label">Room / Bed</span><span class="kv-value">{{ data.ward.room_number }} / {{ data.ward.bed_number }}</span></div>
+            <div class="kv-item"><span class="kv-label">Admission Date</span><span class="kv-value">{{ data.ward.admission_date }}</span></div>
+            <div class="kv-item"><span class="kv-label">Discharge Date</span><span class="kv-value">{{ data.ward.discharge_date }}</span></div>
+            <div class="kv-item"><span class="kv-label">Length of Stay</span><span class="kv-value">{{ data.ward.length_of_stay }} night(s)</span></div>
+            <div class="kv-item"><span class="kv-label">Rate / Night</span><span class="kv-value">KSh {{ data.ward.ward_rate|floatformat:2 }}</span></div>
+            <div class="kv-item"><span class="kv-label">Total Ward Charges</span><span class="kv-value fw-bold">KSh {{ data.ward.total_charges|floatformat:2 }}</span></div>
+        </div>
+        {% endif %}
+
+        <!-- Nursing -->
+        {% if data.nursing %}
+        <div class="section-heading"><i class="bi bi-heart-pulse"></i> Nursing Services</div>
+        <table class="data-table">
+            <thead><tr><th>Service</th><th>Qty</th><th class="text-end">Unit Price</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+                {% for n in data.nursing %}
+                <tr><td>{{ n.service }}</td><td class="text-center">{{ n.quantity }}</td><td class="text-end">KSh {{ n.unit_price|floatformat:2 }}</td><td class="text-end fw-bold">KSh {{ n.amount|floatformat:2 }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Other Charges -->
+        {% if data.other_charges %}
+        <div class="section-heading"><i class="bi bi-three-dots"></i> Other Charges</div>
+        <table class="data-table">
+            <thead><tr><th>Service</th><th>Qty</th><th class="text-end">Unit Price</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+                {% for o in data.other_charges %}
+                <tr><td>{{ o.service }}</td><td class="text-center">{{ o.quantity }}</td><td class="text-end">KSh {{ o.unit_price|floatformat:2 }}</td><td class="text-end fw-bold">KSh {{ o.amount|floatformat:2 }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Bill Summary -->
+        <div class="section-heading"><i class="bi bi-calculator"></i> Bill Summary</div>
+        <table class="summary-table">
+            {% if data.summary.registration_fee > 0 %}<tr><td class="label-cell">Registration Fee</td><td class="text-end">KSh {{ data.summary.registration_fee|floatformat:2 }}</td></tr>{% endif %}
+            {% if data.summary.consultation_fee > 0 %}<tr><td class="label-cell">Consultation Fee</td><td class="text-end">KSh {{ data.summary.consultation_fee|floatformat:2 }}</td></tr>{% endif %}
+            {% if data.summary.lab_charges > 0 %}<tr><td class="label-cell">Laboratory Charges</td><td class="text-end">KSh {{ data.summary.lab_charges|floatformat:2 }}</td></tr>{% endif %}
+            {% if data.summary.radiology_charges > 0 %}<tr><td class="label-cell">Radiology Charges</td><td class="text-end">KSh {{ data.summary.radiology_charges|floatformat:2 }}</td></tr>{% endif %}
+            {% if data.summary.medication_charges > 0 %}<tr><td class="label-cell">Medication Charges</td><td class="text-end">KSh {{ data.summary.medication_charges|floatformat:2 }}</td></tr>{% endif %}
+            {% if data.summary.ward_charges > 0 %}<tr><td class="label-cell">Ward Charges</td><td class="text-end">KSh {{ data.summary.ward_charges|floatformat:2 }}</td></tr>{% endif %}
+            {% if data.summary.nursing_charges > 0 %}<tr><td class="label-cell">Nursing Charges</td><td class="text-end">KSh {{ data.summary.nursing_charges|floatformat:2 }}</td></tr>{% endif %}
+            {% if data.summary.other_charges > 0 %}<tr><td class="label-cell">Other Charges</td><td class="text-end">KSh {{ data.summary.other_charges|floatformat:2 }}</td></tr>{% endif %}
+            <tr class="total-row"><td>Total Hospital Bill</td><td class="text-end">KSh {{ data.summary.grand_total|floatformat:2 }}</td></tr>
+            <tr class="paid-row"><td class="label-cell">(-) Amount Paid</td><td class="text-end text-success fw-bold">KSh {{ data.summary.amount_paid|floatformat:2 }}</td></tr>
+            <tr><td class="label-cell">Outstanding Before Rebate</td><td class="text-end fw-bold">KSh {{ data.summary.outstanding_before_rebate|floatformat:2 }}</td></tr>
+            {% if data.summary.nhif_bed_rebate > 0 %}
+            <tr class="rebate-row"><td class="label-cell fw-bold">NHIF/SHA Bed Rebate ({{ data.summary.nights_stayed }} nights &times; KSh {{ data.summary.rebate_per_night|floatformat:2 }}/night)</td><td class="text-end fw-bold">- KSh {{ data.summary.nhif_bed_rebate|floatformat:2 }}</td></tr>
+            {% endif %}
+            <tr class="final-row"><td>Final Balance</td><td class="text-end {% if data.summary.balance > 0 %}text-danger{% else %}text-success{% endif %}">KSh {{ data.summary.balance|floatformat:2 }}</td></tr>
+        </table>
+
+        <!-- Payment History -->
+        {% if data.payments %}
+        <div class="section-heading"><i class="bi bi-cash-stack"></i> Payment History</div>
+        <table class="data-table">
+            <thead><tr><th>Date</th><th>Receipt #</th><th>Method</th><th class="text-end">Amount</th><th>Cashier</th></tr></thead>
+            <tbody>
+                {% for p in data.payments %}
+                <tr><td>{{ p.date }}</td><td>{{ p.receipt_number }}</td><td>{{ p.payment_method }}</td><td class="text-end text-success fw-bold">KSh {{ p.amount|floatformat:2 }}</td><td>{{ p.cashier }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Signature Area -->
+        <div class="sig-area">
+            <div class="sig-box">
+                <div class="sig-line">Prepared By</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line">Approved By</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line">Patient Signature</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="inv-footer">
+            <p class="mb-1"><strong>{{ data.hospital.name|upper }}</strong></p>
+            <p class="mb-1">Thank you for choosing our hospital.</p>
+            <p class="mb-1">Please retain this invoice for future reference.</p>
+            <p class="mb-0">This invoice was generated electronically by the TENOCARE HOSPITAL Information Management System.</p>
+        </div>
+
+        <div class="text-center mt-3 no-print">
+            <button onclick="window.print()" class="btn btn-primary btn-sm"><i class="bi bi-printer me-1"></i>Print Invoice</button>
+        </div>
+    </div>
+</body>
+</html>

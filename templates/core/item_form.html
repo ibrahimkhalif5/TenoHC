@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} - THHIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-box-seam me-2"></i>{{ title }}
+        </h5>
+        <a href="{% url 'core:item-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Item Master
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    {% if item %}
+                    <div class="alert alert-light border mb-3">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>Item Code:</strong> <code>{{ item.item_code }}</code>
+                            </div>
+                            <div>
+                                <strong>Created:</strong> {{ item.created_at|date:"d M Y H:i" }}
+                                {% if item.created_by %} by {{ item.created_by.get_short_name }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="d-flex gap-2 justify-content-end mt-3">
+                            <a href="{% url 'core:item-list' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>
+                                {% if item %}Save Changes{% else %}Create Item{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i>Help</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small mb-0">
+                        <li class="mb-2"><strong>Item Code:</strong> Auto-generated (ITM-XXXX).</li>
+                        <li class="mb-2"><strong>Category:</strong> Determines which department uses this item.</li>
+                        <li class="mb-2"><strong>Unit Price:</strong> Charged to patients. No hardcoded prices anywhere else.</li>
+                        <li class="mb-2"><strong>Cost Price:</strong> Hospital's cost (used for profitability reports).</li>
+                        <li class="mb-2"><strong>Unit of Measure:</strong> How it's quantified (Unit, Tablet, Test, Session, Night).</li>
+                        <li class="mb-2"><strong>Normal Range:</strong> Reference range for lab tests (auto-populates lab result entry).</li>
+                        <li class="mb-2"><strong>Unit:</strong> Measurement unit for lab tests (e.g., mg/dL, x10^9/L).</li>
+                        <li class="mb-2"><strong>Department:</strong> Which department manages this item.</li>
+                        <li class="mb-0"><strong>Active:</strong> Inactive items won't appear in dropdowns.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-3 border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-1"></i>Quick Tip</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">Prices set here are automatically used across all modules:</p>
+                    <ul class="small mb-0">
+                        <li>Consultation prescriptions</li>
+                        <li>Lab test billing</li>
+                        <li>Radiology billing</li>
+                        <li>Pharmacy charges</li>
+                        <li>Ward charges</li>
+                        <li>Invoice generation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

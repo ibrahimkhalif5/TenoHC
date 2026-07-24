@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}New Purchase{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0"><i class="bi bi-cart me-2"></i>New Purchase</h5>
+        <a href="{% url 'inventory:inventory-purchases' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+
+    <form method="post" id="purchase-form">
+        {% csrf_token %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">Purchase Details</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Supplier</label>
+                        <select name="supplier" class="form-select" required>
+                            <option value="">-- Select Supplier --</option>
+                            {% for s in form.supplier.field.queryset %}
+                            <option value="{{ s.pk }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Purchase Date</label>
+                        <input type="date" name="purchase_date" class="form-control" required
+                               value="{{ form.purchase_date.value|default:'' }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Invoice #</label>
+                        <input type="text" name="invoice_number" class="form-control" value="{{ form.invoice_number.value|default:'' }}">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label fw-bold">Notes</label>
+                        <input type="text" name="notes" class="form-control">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between">
+                <span><i class="bi bi-list-ul me-1"></i>Purchase Items</span>
+                <button type="button" class="btn btn-sm btn-light" onclick="addItem()">+ Add Item</button>
+            </div>
+            <div class="card-body">
+                <div id="items-container">
+                    <div class="item-row row mb-3 p-2 border rounded bg-light">
+                        <div class="col-md-3">
+                            <label class="form-label">Medicine</label>
+                            <select name="item_medicine" class="form-select" required>
+                                <option value="">-- Select --</option>
+                                {% for m in form.supplier.field.queryset.0.medicines.all|default:"" %}
+                                <option value="{{ m.pk }}">{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">Qty</label>
+                            <input type="number" name="item_quantity" class="form-control" min="1" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Unit Cost (KSh )</label>
+                            <input type="number" name="item_unit_cost" class="form-control" step="0.01" min="0" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Batch #</label>
+                            <input type="text" name="item_batch_number" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="date" name="item_expiry_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove()">Remove</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-check-circle me-1"></i>Create Purchase
+        </button>
+    </form>
+</div>
+
+<script>
+function addItem() {
+    const container = document.getElementById('items-container');
+    const firstRow = container.querySelector('.item-row');
+    const clone = firstRow.cloneNode(true);
+    // Clear values
+    clone.querySelectorAll('input').forEach(i => i.value = '');
+    clone.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+    container.appendChild(clone);
+}
+</script>
+{% endblock %}

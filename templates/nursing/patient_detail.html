@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Nursing Record - {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-heart-pulse me-2"></i>Nursing Record
+        </h5>
+        <a href="{% url 'nursing:nursing-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Patient Info -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-person me-2"></i>Patient Info
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-1">{{ patient.full_name }}</h6>
+                    <p class="text-muted mb-1">{{ patient.patient_number }}</p>
+                    <p class="text-muted mb-1">{{ patient.get_gender_display }}, {{ patient.age }} yrs</p>
+                    <hr>
+                    <p class="mb-1"><strong>Ward:</strong> {{ admission.ward.name }}</p>
+                    <p class="mb-1"><strong>Room:</strong> {{ admission.room.room_number }} / Bed {{ admission.bed.bed_number }}</p>
+                    <p class="mb-1"><strong>Admitted:</strong> {{ admission.admission_date|date:"d M Y" }}</p>
+                    <p class="mb-0"><strong>Nights:</strong> {{ admission.nights_stayed }}</p>
+                    {% if admission.diagnosis %}
+                    <hr>
+                    <p class="mb-0"><strong>Diagnosis:</strong> {{ admission.diagnosis }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-8">
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-3" id="nursingTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#notes">
+                        <i class="bi bi-journal-text me-1"></i>Notes
+                        <span class="badge bg-secondary">{{ admission.nursing_notes.count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#vitals">
+                        <i class="bi bi-thermometer-half me-1"></i>Vitals
+                        <span class="badge bg-secondary">{{ admission.daily_vitals.count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#treatments">
+                        <i class="bi bi-capsule me-1"></i>Treatments
+                        <span class="badge bg-secondary">{{ admission.treatments.count }}</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+
+                <!-- ── Nursing Notes Tab ─────────────────────────── -->
+                <div class="tab-pane fade show active" id="notes">
+                    <!-- Add Note Form -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <i class="bi bi-plus-circle me-1"></i>Add Nursing Note
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="{% url 'nursing:nursing-add-note' admission.id %}">
+                                {% csrf_token %}
+                                {{ note_form|crispy }}
+                                <button type="submit" class="btn btn-primary btn-sm mt-2">
+                                    <i class="bi bi-check-circle me-1"></i>Add Note
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Notes List -->
+                    {% for note in admission.nursing_notes.all %}
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <p class="mb-0">{{ note.note }}</p>
+                                </div>
+                                <small class="text-muted text-nowrap ms-2">
+                                    {{ note.created_at|date:"d M Y H:i" }}
+                                    <br>by {{ note.created_by|default:"System" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No nursing notes yet.</p>
+                    {% endfor %}
+                </div>
+
+                <!-- ── Daily Vitals Tab ──────────────────────────── -->
+                <div class="tab-pane fade" id="vitals">
+                    <!-- Add Vitals Form -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                            <i class="bi bi-plus-circle me-1"></i>Record Daily Vitals
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="{% url 'nursing:nursing-add-vitals' admission.id %}">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label fw-bold">Temp (°C)</label>
+                                        <input type="number" name="temperature" class="form-control" step="0.1" required>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label fw-bold">BP Systolic</label>
+                                        <input type="number" name="blood_pressure_systolic" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label fw-bold">BP Diastolic</label>
+                                        <input type="number" name="blood_pressure_diastolic" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label fw-bold">Pulse (bpm)</label>
+                                        <input type="number" name="pulse" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label fw-bold">Resp Rate</label>
+                                        <input type="number" name="respiratory_rate" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label fw-bold">O₂ Sat (%)</label>
+                                        <input type="number" name="oxygen_saturation" class="form-control" step="0.1" required>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label fw-bold">Weight (kg)</label>
+                                        <input type="number" name="weight" class="form-control" step="0.1">
+                                    </div>
+                                    <div class="col-md-8 mb-2">
+                                        <label class="form-label fw-bold">Notes</label>
+                                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-success mt-2">
+                                    <i class="bi bi-check-circle me-1"></i>Record Vitals
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Vitals History -->
+                    {% for v in admission.daily_vitals.all %}
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ v.record_date|date:"d M Y" }}</strong>
+                                    <span class="badge bg-success ms-2">{{ v.temperature }}°C</span>
+                                    <span class="badge bg-info">BP {{ v.blood_pressure_systolic }}/{{ v.blood_pressure_diastolic }}</span>
+                                    <span class="badge bg-warning text-dark">Pulse {{ v.pulse }}</span>
+                                    <span class="badge bg-secondary">O₂ {{ v.oxygen_saturation }}%</span>
+                                    {% if v.weight %}
+                                    <span class="badge bg-dark">Wt {{ v.weight }}kg</span>
+                                    {% endif %}
+                                    {% if v.notes %}
+                                    <p class="text-muted mb-0 mt-1">{{ v.notes }}</p>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted text-nowrap ms-2">
+                                    {{ v.created_at|date:"H:i" }}
+                                    <br>by {{ v.recorded_by|default:"System" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No vitals recorded yet.</p>
+                    {% endfor %}
+                </div>
+
+                <!-- ── Treatments Tab ────────────────────────────── -->
+                <div class="tab-pane fade" id="treatments">
+                    <!-- Add Treatment Form -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">
+                            <i class="bi bi-plus-circle me-1"></i>Record Treatment
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="{% url 'nursing:nursing-add-treatment' admission.id %}">
+                                {% csrf_token %}
+                                {{ treatment_form|crispy }}
+                                <button type="submit" class="btn btn-info btn-sm mt-2 text-white">
+                                    <i class="bi bi-check-circle me-1"></i>Add Treatment
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Treatments List -->
+                    {% for t in admission.treatments.all %}
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ t.treatment }}</strong>
+                                    {% if t.medication %}
+                                    <br><span class="text-muted">{{ t.medication }} {{ t.dosage }} {{ t.frequency }}</span>
+                                    {% endif %}
+                                    {% if t.notes %}
+                                    <p class="text-muted mb-0 mt-1">{{ t.notes }}</p>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted text-nowrap ms-2">
+                                    {{ t.created_at|date:"d M Y H:i" }}
+                                    <br>by {{ t.given_by|default:"System" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No treatments recorded yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

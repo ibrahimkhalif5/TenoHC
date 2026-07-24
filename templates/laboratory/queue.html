@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load visit_tags %}
+
+{% block title %}Laboratory Queue - THHIMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bi bi-lab"></i> Laboratory Queue
+        {% if queue_count > 0 %}
+        <span class="badge bg-warning text-dark ms-2">{{ queue_count }} waiting</span>
+        {% endif %}
+    </h4>
+</div>
+
+{% if visits %}
+<h5 class="mb-3"><i class="bi bi-hourglass-split me-1 text-warning"></i> Waiting for Tests</h5>
+<div class="row">
+    {% for visit in visits %}
+    <div class="col-md-6 col-xl-4 mb-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-1">
+                            <strong>{{ visit.patient.patient_number }}</strong>
+                        </h6>
+                        <h5 class="mb-1">{{ visit.patient.full_name }}</h5>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-info">{{ visit.visit_number }}</span><br>
+                        {% visit_status_badge visit %}
+                    </div>
+                </div>
+                <table class="table table-sm table-borderless mb-3">
+                    <tr>
+                        <td class="text-muted" style="width: 40%">Gender</td>
+                        <td>{{ visit.patient.get_gender_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Age</td>
+                        <td>{{ visit.patient.age }} years</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Phone</td>
+                        <td>{{ visit.patient.phone }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Type</td>
+                        <td>
+                            <span class="badge bg-{% if visit.patient.patient_type == 'NEW' %}success{% else %}info{% endif %}">
+                                {{ visit.patient.get_patient_type_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% if visit.patient.patient_category %}
+                    <tr>
+                        <td class="text-muted">Category</td>
+                        <td>{{ visit.patient.patient_category.name }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+                <a href="{% url 'laboratory:lab-detail' visit_id=visit.pk %}"
+                   class="btn btn-primary w-100">
+                    <i class="bi bi-flask"></i> Conduct Tests
+                </a>
+            </div>
+            <div class="card-footer bg-white text-muted">
+                <small>Waiting: {{ visit.created_at|timesince }} ago</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card shadow-sm mb-4">
+    <div class="card-body text-center py-4">
+        <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+        <h5 class="mt-2">No patients waiting</h5>
+        <p class="text-muted">Queue is clear.</p>
+    </div>
+</div>
+{% endif %}
+
+{% if completed_visits %}
+<hr class="my-4">
+<h5 class="mb-3"><i class="bi bi-file-earmark-pdf me-1 text-danger"></i> Completed Lab Reports</h5>
+<div class="row">
+    {% for visit in completed_visits %}
+    <div class="col-md-6 col-xl-4 mb-3">
+        <div class="card shadow-sm h-100 border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-1"><strong>{{ visit.patient.patient_number }}</strong></h6>
+                        <h5 class="mb-1">{{ visit.patient.full_name }}</h5>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-success">Completed</span><br>
+                        <span class="badge bg-info">{{ visit.visit_number }}</span>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    {% for lr in visit.lab_requests.all %}
+                    <span class="badge bg-light text-dark border me-1 mb-1">
+                        {% if lr.is_completed %}<i class="bi bi-check-circle text-success me-1"></i>{% endif %}{{ lr.lab_test.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'laboratory:lab-report-pdf' visit_id=visit.pk %}"
+                       class="btn btn-danger btn-sm flex-fill">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                    </a>
+                    <a href="{% url 'laboratory:lab-report-print' visit_id=visit.pk %}"
+                       target="_blank"
+                       class="btn btn-outline-primary btn-sm flex-fill">
+                        <i class="bi bi-printer me-1"></i>Print
+                    </a>
+                </div>
+            </div>
+            <div class="card-footer bg-white text-muted">
+                <small>Updated: {{ visit.updated_at|timesince }} ago</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

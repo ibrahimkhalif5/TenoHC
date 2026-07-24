@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Movement History{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i>Stock Movement History</h4>
+        <a href="{% url 'inventory:inventory-dashboard' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th><th>Medicine</th><th>Type</th><th>Qty</th>
+                    <th>Batch</th><th>Reference</th><th>Notes</th><th>By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mv in movements %}
+                <tr>
+                    <td>{{ mv.created_at|date:"d M Y H:i" }}</td>
+                    <td><strong>{{ mv.medicine.name }}</strong></td>
+                    <td>
+                        <span class="badge bg-{% if mv.movement_type == 'PURCHASE' %}success{% elif mv.movement_type == 'DISPENSE' %}danger{% elif mv.movement_type == 'EXPIRED' %}dark{% else %}secondary{% endif %}">
+                            {{ mv.get_movement_type_display }}
+                        </span>
+                    </td>
+                    <td class="{% if mv.quantity > 0 %}text-success{% else %}text-danger{% endif %}">
+                        <strong>{% if mv.quantity > 0 %}+{% endif %}{{ mv.quantity }}</strong>
+                    </td>
+                    <td>{{ mv.batch_number }}</td>
+                    <td>{{ mv.reference|default:"-" }}</td>
+                    <td>{{ mv.notes|truncatewords:10|default:"-" }}</td>
+                    <td>{{ mv.created_by|default:"System" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-3">No movements found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

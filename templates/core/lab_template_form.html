@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - THHIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-file-earmark-medical me-2"></i>{{ title }}
+        </h5>
+        <a href="{% url 'core:lab-template-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Templates
+        </a>
+    </div>
+
+    <form method="post" id="template-form">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Template Settings</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if editing %}
+                        <div class="alert alert-light border mb-3">
+                            <strong>Lab Test:</strong> {{ template.lab_test.name }}
+                            <span class="badge bg-info ms-2">{{ template.lab_test.get_category_display }}</span>
+                        </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Lab Test <span class="text-danger">*</span></label>
+                            <select name="lab_test" class="form-select" required id="lab-test-select">
+                                <option value="">-- Select a Lab Test --</option>
+                                {% for lt in lab_tests %}
+                                <option value="{{ lt.pk }}" {% if lt.pk in existing_ids %}disabled title="Template already exists"{% endif %}>
+                                    {{ lt.name }} ({{ lt.get_category_display }})
+                                    {% if lt.pk in existing_ids %}[TEMPLATE EXISTS]{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <div class="mb-0">
+                            <label class="form-label fw-bold">Instructions for Technician</label>
+                            <textarea name="instructions" class="form-control" rows="2"
+                                      placeholder="Optional instructions (e.g., Fasting required, Sample type...)">{{ template.instructions|default:"" }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parameters -->
+                <div class="card mb-4">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-list-ol me-2"></i>Test Parameters</h6>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-param">
+                            <i class="bi bi-plus-circle me-1"></i>Add Parameter
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0" id="params-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:5%">#</th>
+                                        <th style="width:25%">Parameter Name <span class="text-danger">*</span></th>
+                                        <th style="width:15%">Unit</th>
+                                        <th style="width:20%">Normal Range (Display)</th>
+                                        <th style="width:15%">Min (for flagging)</th>
+                                        <th style="width:15%">Max (for flagging)</th>
+                                        <th style="width:5%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="params-body">
+                                    {% if editing and parameters %}
+                                        {% for param in parameters %}
+                                        <tr class="param-row">
+                                            <td class="text-center text-muted">{{ forloop.counter }}</td>
+                                            <td><input type="text" name="param_name[]" class="form-control form-control-sm" value="{{ param.name }}" required placeholder="e.g., WBC"></td>
+                                            <td><input type="text" name="param_unit[]" class="form-control form-control-sm" value="{{ param.unit }}" placeholder="e.g., x10^9/L"></td>
+                                            <td><input type="text" name="param_range[]" class="form-control form-control-sm" value="{{ param.normal_range }}" placeholder="e.g., 4.0 - 10.0"></td>
+                                            <td><input type="number" name="param_min[]" class="form-control form-control-sm" value="{{ param.normal_min|default:'' }}" step="0.01" placeholder="e.g., 4.0"></td>
+                                            <td><input type="number" name="param_max[]" class="form-control form-control-sm" value="{{ param.normal_max|default:'' }}" step="0.01" placeholder="e.g., 10.0"></td>
+                                            <td><button type="button" class="btn btn-outline-danger btn-sm remove-param"><i class="bi bi-x"></i></button></td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr class="param-row">
+                                            <td class="text-center text-muted">1</td>
+                                            <td><input type="text" name="param_name[]" class="form-control form-control-sm" required placeholder="e.g., WBC"></td>
+                                            <td><input type="text" name="param_unit[]" class="form-control form-control-sm" placeholder="e.g., x10^9/L"></td>
+                                            <td><input type="text" name="param_range[]" class="form-control form-control-sm" placeholder="e.g., 4.0 - 10.0"></td>
+                                            <td><input type="number" name="param_min[]" class="form-control form-control-sm" step="0.01" placeholder="e.g., 4.0"></td>
+                                            <td><input type="number" name="param_max[]" class="form-control form-control-sm" step="0.01" placeholder="e.g., 10.0"></td>
+                                            <td><button type="button" class="btn btn-outline-danger btn-sm remove-param"><i class="bi bi-x"></i></button></td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Sidebar -->
+            <div class="col-lg-4">
+                <div class="card border-info mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i>Help</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled small mb-0">
+                            <li class="mb-2"><strong>Parameter Name:</strong> The test component (e.g., WBC, HB, PLT).</li>
+                            <li class="mb-2"><strong>Unit:</strong> Measurement unit (e.g., x10^9/L, g/dL).</li>
+                            <li class="mb-2"><strong>Normal Range:</strong> Display text shown to technician (e.g., 4.0 - 10.0).</li>
+                            <li class="mb-2"><strong>Min/Max:</strong> Numeric bounds used for auto-flagging (LOW/HIGH/NORMAL).</li>
+                            <li class="mb-0"><strong>Display Order:</strong> Parameters appear in the order you add them.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="bi bi-lightbulb me-1"></i>Quick Tip</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small mb-0">Once saved, this template will automatically load when the technician opens a request for this test. They only need to fill in the Result column.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex gap-2 justify-content-end mt-3">
+            <a href="{% url 'core:lab-template-list' %}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>
+                {% if editing %}Save Changes{% else %}Create Template{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tbody = document.getElementById('params-body');
+    const addBtn = document.getElementById('add-param');
+
+    function updateNumbers() {
+        tbody.querySelectorAll('.param-row').forEach(function(row, i) {
+            row.querySelector('td').textContent = i + 1;
+        });
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            const count = tbody.querySelectorAll('.param-row').length;
+            const row = document.createElement('tr');
+            row.className = 'param-row';
+            row.innerHTML =
+                '<td class="text-center text-muted">' + (count + 1) + '</td>' +
+                '<td><input type="text" name="param_name[]" class="form-control form-control-sm" required placeholder="e.g., WBC"></td>' +
+                '<td><input type="text" name="param_unit[]" class="form-control form-control-sm" placeholder="e.g., x10^9/L"></td>' +
+                '<td><input type="text" name="param_range[]" class="form-control form-control-sm" placeholder="e.g., 4.0 - 10.0"></td>' +
+                '<td><input type="number" name="param_min[]" class="form-control form-control-sm" step="0.01" placeholder="e.g., 4.0"></td>' +
+                '<td><input type="number" name="param_max[]" class="form-control form-control-sm" step="0.01" placeholder="e.g., 10.0"></td>' +
+                '<td><button type="button" class="btn btn-outline-danger btn-sm remove-param"><i class="bi bi-x"></i></button></td>';
+            tbody.appendChild(row);
+            updateNumbers();
+        });
+    }
+
+    tbody.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-param')) {
+            const row = e.target.closest('.param-row');
+            if (tbody.querySelectorAll('.param-row').length > 1) {
+                row.remove();
+                updateNumbers();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

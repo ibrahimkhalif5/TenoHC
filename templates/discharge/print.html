@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discharge Summary - {{ patient.patient_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { font-size: 11px; }
+            .section-card { break-inside: avoid; }
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #212529; }
+        .hospital-header { text-align: center; border-bottom: 3px solid #0d6efd; padding-bottom: 10px; margin-bottom: 15px; }
+        .hospital-header img { max-height: 60px; }
+        .hospital-name { font-size: 18px; font-weight: 700; color: #1a1d21; margin: 5px 0 2px; }
+        .hospital-info { font-size: 11px; color: #6c757d; }
+        .doc-title { text-align: center; font-size: 14px; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 1px; margin: 10px 0; padding: 5px; border-top: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; }
+        .section-heading { font-size: 11px; font-weight: 700; color: #0d6efd; text-transform: uppercase; background: #f0f4ff; padding: 4px 8px; border-left: 3px solid #0d6efd; margin: 10px 0 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 15px; border: 1px solid #dee2e6; border-radius: 4px; padding: 5px; }
+        .info-item { display: flex; gap: 5px; padding: 2px 0; border-bottom: 1px solid #f0f0f0; font-size: 10px; }
+        .info-label { font-weight: 600; color: #6c757d; min-width: 110px; }
+        .info-value { color: #212529; }
+        .field-text { font-size: 10px; line-height: 1.5; white-space: pre-wrap; margin-bottom: 5px; }
+        .field-label { font-size: 9px; font-weight: 600; color: #6c757d; text-transform: uppercase; margin-bottom: 1px; }
+        .med-table { font-size: 9px; }
+        .med-table th { background: #0d6efd; color: #fff; font-size: 9px; padding: 4px 6px; }
+        .med-table td { padding: 3px 6px; }
+        .print-footer { text-align: center; font-size: 8px; color: #8b919a; font-style: italic; margin-top: 15px; border-top: 1px solid #dee2e6; padding-top: 8px; }
+        .bordered-box { border: 1px solid #dee2e6; border-radius: 4px; padding: 8px; margin-bottom: 10px; }
+        .doctor-sig img { max-height: 50px; }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 750px; padding: 15px;">
+
+        <!-- Hospital Header -->
+        <div class="hospital-header">
+            {% if hospital.logo %}
+            <img src="{{ hospital.logo.url }}" alt="Hospital Logo" style="max-height: 60px;">
+            {% endif %}
+            <div class="hospital-name">{{ hospital.name }}</div>
+            {% if hospital.address %}
+            <div class="hospital-info">{{ hospital.address }}</div>
+            {% endif %}
+            <div class="hospital-info">
+                {% if hospital.telephone %}Tel: {{ hospital.telephone }}{% endif %}
+                {% if hospital.telephone and hospital.email %} | {% endif %}
+                {% if hospital.email %}Email: {{ hospital.email }}{% endif %}
+            </div>
+        </div>
+
+        <div class="doc-title">Discharge Summary</div>
+
+        <!-- Patient Information -->
+        <div class="section-heading">Patient Information</div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">Patient Number:</span><span class="info-value">{{ admission.patient.patient_number }}</span></div>
+            <div class="info-item"><span class="info-label">Patient Name:</span><span class="info-value">{{ admission.patient.full_name }}</span></div>
+            <div class="info-item"><span class="info-label">Age:</span><span class="info-value">{{ admission.patient.age }} years</span></div>
+            <div class="info-item"><span class="info-label">Gender:</span><span class="info-value">{{ admission.patient.get_gender_display }}</span></div>
+            <div class="info-item"><span class="info-label">Phone Number:</span><span class="info-value">{{ admission.patient.phone }}</span></div>
+            <div class="info-item"><span class="info-label">National ID:</span><span class="info-value">{{ admission.patient.national_id|default:"—" }}</span></div>
+            <div class="info-item"><span class="info-label">Admission Number:</span><span class="info-value">ADM-{{ admission.pk|stringformat:"06d" }}</span></div>
+            <div class="info-item"><span class="info-label">Admission Date:</span><span class="info-value">{{ admission.admission_date|date:"d M Y" }}</span></div>
+            <div class="info-item"><span class="info-label">Discharge Date:</span><span class="info-value">{% if admission.discharge_date %}{{ admission.discharge_date|date:"d M Y" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">Length of Stay:</span><span class="info-value">{{ summary.length_of_stay }} day(s)</span></div>
+            <div class="info-item"><span class="info-label">Ward:</span><span class="info-value">{{ admission.ward.name }} ({{ admission.ward.get_ward_type_display }})</span></div>
+            <div class="info-item"><span class="info-label">Room:</span><span class="info-value">{{ admission.room.room_number }} ({{ admission.room.get_room_type_display }})</span></div>
+            <div class="info-item"><span class="info-label">Bed Number:</span><span class="info-value">{{ admission.bed.bed_number }}</span></div>
+            <div class="info-item"><span class="info-label">Attending Doctor:</span><span class="info-value">{{ admission.admitted_by.get_full_name|default:"—" }}</span></div>
+        </div>
+
+        <!-- Clinical Information -->
+        <div class="section-heading">Clinical Information</div>
+        <div class="bordered-box">
+            <div class="field-label">Primary Diagnosis</div>
+            <div class="field-text">{{ summary.primary_diagnosis|default:"—" }}</div>
+
+            <div class="field-label">Secondary Diagnosis</div>
+            <div class="field-text">{{ summary.secondary_diagnosis|default:"—" }}</div>
+
+            <div class="field-label">Reason for Admission</div>
+            <div class="field-text">{{ summary.reason_for_admission|default:"—" }}</div>
+
+            <div class="field-label">History of Present Illness</div>
+            <div class="field-text">{{ summary.history_of_present_illness|default:"—" }}</div>
+
+            <div class="field-label">Clinical Findings</div>
+            <div class="field-text">{{ summary.clinical_findings|default:"—" }}</div>
+
+            <div class="field-label">Investigations Performed</div>
+            <div class="field-text">{{ summary.investigations_performed|default:"—" }}</div>
+
+            <div class="field-label">Procedures Done During Admission</div>
+            <div class="field-text">{{ summary.procedures_done|default:"—" }}</div>
+
+            <div class="field-label">Treatment Given</div>
+            <div class="field-text">{{ summary.treatment_given|default:"—" }}</div>
+
+            <div class="field-label">Patient Progress During Admission</div>
+            <div class="field-text">{{ summary.patient_progress|default:"—" }}</div>
+
+            <div class="field-label">Condition on Discharge</div>
+            <div class="field-text">{{ summary.condition_on_discharge|default:"—" }}</div>
+        </div>
+
+        <!-- Medication on Discharge -->
+        <div class="section-heading">Medication on Discharge</div>
+        {% if summary.discharge_medications.exists %}
+        <table class="table table-bordered med-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Medicine</th>
+                    <th>Dosage</th>
+                    <th>Frequency</th>
+                    <th>Duration</th>
+                    <th>Instructions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for med in summary.discharge_medications.all %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ med.medicine_name }}</td>
+                    <td>{{ med.dosage|default:"—" }}</td>
+                    <td>{{ med.frequency|default:"—" }}</td>
+                    <td>{{ med.duration|default:"—" }}</td>
+                    <td>{{ med.instructions|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="field-text text-muted">No discharge medications.</p>
+        {% endif %}
+
+        <!-- Billing Summary -->
+        <div class="section-heading">Billing Summary</div>
+        <div class="bordered-box">
+            <div class="row" style="font-size:10px;">
+                <div class="col-6">
+                    <div class="field-label">Ward Charge ({{ billing.nights_stayed }} nights &times; KSh {{ billing.price_per_night|floatformat:2 }})</div>
+                    <div class="field-text">KSh {{ billing.ward_charge|floatformat:2 }}</div>
+                    {% if billing.invoice_count > 0 %}
+                    <div class="field-label">Other Charges ({{ billing.invoice_count }} invoice{{ billing.invoice_count|pluralize }})</div>
+                    <div class="field-text">KSh {{ billing.other_charges|floatformat:2 }}</div>
+                    {% endif %}
+                    <div class="field-label">Total Hospital Bill</div>
+                    <div class="field-text" style="font-weight:700;">KSh {{ billing.total_billed|floatformat:2 }}</div>
+                </div>
+                <div class="col-6">
+                    {% if billing.nhif_bed_rebate > 0 %}
+                    <div class="field-label">NHIF/SHA Bed Rebate ({{ billing.nights_stayed }} nights &times; KSh {{ billing.rebate_per_night|floatformat:2 }})</div>
+                    <div class="field-text" style="color:#198754;">- KSh {{ billing.nhif_bed_rebate|floatformat:2 }}</div>
+                    {% endif %}
+                    <div class="field-label">(-) Total Amount Paid</div>
+                    <div class="field-text">- KSh {{ billing.total_paid|floatformat:2 }}</div>
+                    <div class="field-label">Outstanding Before Rebate</div>
+                    <div class="field-text" style="font-weight:700;">KSh {{ billing.outstanding_before_rebate|floatformat:2 }}</div>
+                    {% if billing.nhif_bed_rebate > 0 %}
+                    <div class="field-label" style="color:#198754;">Final Balance After NHIF/SHA Rebate</div>
+                    <div class="field-text" style="font-weight:700;color:#198754;">KSh {{ billing.final_balance|floatformat:2 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Doctor Information -->
+        <div class="section-heading">Doctor Information</div>
+        <div class="bordered-box">
+            <div class="row">
+                <div class="col-6">
+                    <div class="field-label">Doctor Name</div>
+                    <div class="field-text">{{ summary.finalized_by.get_full_name|default:admission.admitted_by.get_full_name|default:"—" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="field-label">Date</div>
+                    <div class="field-text">{% if summary.finalized_at %}{{ summary.finalized_at|date:"d M Y" }}{% else %}{% now "d M Y" %}{% endif %}</div>
+                </div>
+            </div>
+            {% if summary.doctor_signature %}
+            <div class="mt-2 doctor-sig">
+                <div class="field-label">Doctor Signature</div>
+                <img src="{{ summary.doctor_signature.url }}" alt="Doctor Signature" style="max-height: 50px;">
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer -->
+        <div class="print-footer">
+            This discharge summary was generated electronically by the TENOCARE HOSPITAL Information Management System.
+        </div>
+
+        <!-- Print Button (no-print) -->
+        <div class="text-center mt-3 no-print">
+            <button onclick="window.print()" class="btn btn-primary btn-sm">
+                <i class="bi bi-printer me-1"></i>Print Summary
+            </button>
+        </div>
+    </div>
+</body>
+</html>

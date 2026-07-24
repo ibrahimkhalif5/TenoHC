@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Triage Assessment - {{ patient.full_name }} - THHIMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">
+            <i class="bi bi-clipboard-pulse"></i> Triage Assessment
+        </h4>
+        <small class="text-muted">
+            Visit: {{ visit.visit_number }} | Patient: {{ patient.patient_number }}
+        </small>
+    </div>
+    <a href="{% url 'triage:triage-list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Queue
+    </a>
+</div>
+
+<div class="row">
+    <!-- Patient Info -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-person"></i> Patient Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if patient.photo %}
+                    <img src="{{ patient.photo.url }}" alt="Photo"
+                         class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center"
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-person" style="font-size: 2.5rem; color: #ccc;"></i>
+                    </div>
+                    {% endif %}
+                    <h5 class="mt-2 mb-0">{{ patient.full_name }}</h5>
+                    <span class="badge bg-primary">{{ patient.patient_number }}</span>
+                </div>
+
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td class="text-muted" style="width: 45%">Gender</td>
+                        <td>{{ patient.get_gender_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Age</td>
+                        <td>{{ patient.age }} years</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">DOB</td>
+                        <td>{{ patient.date_of_birth|date:"d M Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Phone</td>
+                        <td>{{ patient.phone }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Patient Type</td>
+                        <td>
+                            <span class="badge bg-{% if patient.patient_type == 'NEW' %}success{% else %}info{% endif %}">
+                                {{ patient.get_patient_type_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Payment</td>
+                        <td>{{ patient.get_payment_type_display }}</td>
+                    </tr>
+                    {% if patient.patient_category %}
+                    <tr>
+                        <td class="text-muted">Category</td>
+                        <td>{{ patient.patient_category.name }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Address</td>
+                        <td>{{ patient.address|truncatewords:8 }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vitals Entry Form -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-activity"></i> Vitals & Assessment</h6>
+            </div>
+            <div class="card-body">
+                {% crispy form %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Admit Patient - {{ visit.visit_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-hospital me-2"></i>Admit Patient
+        </h5>
+        <a href="{% url 'admission:admission-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Queue
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Patient Info -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-person me-2"></i>Patient Information
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-2">{{ patient.full_name }}</h6>
+                    <p class="text-muted mb-1">{{ visit.visit_number }}</p>
+                    <p class="text-muted mb-1">{{ patient.phone }}</p>
+                    <p class="text-muted mb-1">{{ patient.get_gender_display }}, {{ patient.age }} yrs</p>
+                    <p class="text-muted mb-1">Category: {{ patient.patient_category }}</p>
+                    <p class="text-muted mb-0">Payment: {{ patient.get_payment_type_display }}</p>
+                </div>
+            </div>
+
+            {% if visit.triage_assessments.all %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <i class="bi bi-thermometer-half me-2"></i>Triage Vitals
+                </div>
+                <div class="card-body">
+                    {% with triage=visit.triage_assessments.first %}
+                    <table class="table table-sm mb-0">
+                        <tr><td>Temp</td><td><strong>{{ triage.temperature }}°C</strong></td></tr>
+                        <tr><td>BP</td><td><strong>{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg</strong></td></tr>
+                        <tr><td>Pulse</td><td><strong>{{ triage.pulse }} bpm</strong></td></tr>
+                        <tr><td>O₂ Sat</td><td><strong>{{ triage.oxygen_saturation }}%</strong></td></tr>
+                    </table>
+                    <p class="mt-2 mb-0"><strong>Complaint:</strong> {{ triage.chief_complaint }}</p>
+                    {% endwith %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Ward Info Cards -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-door-open me-2"></i>Available Wards
+                </div>
+                <div class="card-body">
+                    {% for ward in wards %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                        <div>
+                            <strong>{{ ward.name }}</strong>
+                            <br><small class="text-muted">{{ ward.get_ward_type_display }}</small>
+                        </div>
+                        <div class="text-end">
+                            <strong class="text-primary">KSh {{ ward.price_per_night|floatformat:0 }}/night</strong>
+                            <br><small class="text-success">{{ ward.available_bed_count }} beds available</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Admission Form -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-hospital me-2"></i>Admission Details
+                </div>
+                <div class="card-body">
+                    <form method="post" id="admission-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="ward_id" id="ward-id-input" value="">
+                        <input type="hidden" name="room_id" id="room-id-input" value="">
+                        <input type="hidden" name="bed_id" id="bed-id-input" value="">
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Ward</label>
+                                <select id="ward-select" class="form-select" required>
+                                    <option value="">-- Select Ward --</option>
+                                    {% for ward in wards %}
+                                    <option value="{{ ward.id }}" data-price="{{ ward.price_per_night }}">
+                                        {{ ward.name }} (KSh {{ ward.price_per_night|floatformat:0 }}/night)
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Room</label>
+                                <select id="room-select" class="form-select" required disabled>
+                                    <option value="">-- Select Ward First --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Bed</label>
+                                <select id="bed-select" class="form-select" required disabled>
+                                    <option value="">-- Select Room First --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Cost Preview -->
+                        <div id="cost-preview" class="alert alert-info" style="display:none;">
+                            <strong>Nightly Rate:</strong> <span id="nightly-rate">KSh 0</span>/night
+                            <br><strong>Estimated Daily Charge:</strong> <span id="daily-charge">KSh 0</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Diagnosis</label>
+                            <textarea name="diagnosis" class="form-control" rows="2"
+                                      placeholder="Enter diagnosis..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                      placeholder="Additional notes..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg"
+                                id="submit-btn" disabled>
+                            <i class="bi bi-hospital me-1"></i>Admit Patient
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const wardSelect = document.getElementById('ward-select');
+    const roomSelect = document.getElementById('room-select');
+    const bedSelect = document.getElementById('bed-select');
+    const wardIdInput = document.getElementById('ward-id-input');
+    const roomIdInput = document.getElementById('room-id-input');
+    const bedIdInput = document.getElementById('bed-id-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const costPreview = document.getElementById('cost-preview');
+    const nightlyRate = document.getElementById('nightly-rate');
+    const dailyCharge = document.getElementById('daily-charge');
+
+    wardSelect.addEventListener('change', function() {
+        const wardId = this.value;
+        wardIdInput.value = wardId;
+        roomIdInput.value = '';
+        bedIdInput.value = '';
+        roomSelect.innerHTML = '<option value="">Loading rooms...</option>';
+        roomSelect.disabled = true;
+        bedSelect.innerHTML = '<option value="">-- Select Room First --</option>';
+        bedSelect.disabled = true;
+        submitBtn.disabled = true;
+        costPreview.style.display = 'none';
+
+        if (!wardId) {
+            roomSelect.innerHTML = '<option value="">-- Select Ward First --</option>';
+            return;
+        }
+
+        const selectedOption = this.options[this.selectedIndex];
+        const price = selectedOption.getAttribute('data-price');
+        nightlyRate.textContent = 'KSh ' + parseFloat(price).toLocaleString();
+        dailyCharge.textContent = 'KSh ' + parseFloat(price).toLocaleString();
+        costPreview.style.display = 'block';
+
+        fetch('/admission/api/rooms/?ward_id=' + wardId)
+            .then(r => r.json())
+            .then(data => {
+                roomSelect.innerHTML = '<option value="">-- Select Room --</option>';
+                data.forEach(room => {
+                    roomSelect.innerHTML += '<option value="' + room.id + '" data-beds="' + room.available_beds + '">' +
+                        'Room ' + room.room_number + ' (' + room.room_type + ' - ' + room.available_beds + ' beds)' +
+                        '</option>';
+                });
+                roomSelect.disabled = false;
+            });
+    });
+
+    roomSelect.addEventListener('change', function() {
+        const roomId = this.value;
+        roomIdInput.value = roomId;
+        bedIdInput.value = '';
+        bedSelect.innerHTML = '<option value="">Loading beds...</option>';
+        bedSelect.disabled = true;
+        submitBtn.disabled = true;
+
+        if (!roomId) {
+            bedSelect.innerHTML = '<option value="">-- Select Room First --</option>';
+            return;
+        }
+
+        fetch('/admission/api/beds/?room_id=' + roomId)
+            .then(r => r.json())
+            .then(data => {
+                bedSelect.innerHTML = '<option value="">-- Select Bed --</option>';
+                data.forEach(bed => {
+                    bedSelect.innerHTML += '<option value="' + bed.id + '">' +
+                        'Bed ' + bed.bed_number + '</option>';
+                });
+                bedSelect.disabled = false;
+            });
+    });
+
+    bedSelect.addEventListener('change', function() {
+        bedIdInput.value = this.value;
+        submitBtn.disabled = !this.value;
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Discharge - {{ admission.patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-box-arrow-right me-2"></i>Discharge Patient
+        </h5>
+        <a href="{% url 'admission:admission-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Queue
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <!-- Patient Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-person me-2"></i>Patient Information
+                </div>
+                <div class="card-body">
+                    <h6>{{ admission.patient.full_name }}</h6>
+                    <p class="text-muted mb-1">{{ admission.patient.patient_number }}</p>
+                    <p class="text-muted mb-1">{{ admission.patient.phone }}</p>
+                    <p class="text-muted mb-0">{{ admission.patient.get_gender_display }}, {{ admission.patient.age }} yrs</p>
+                </div>
+            </div>
+
+            <!-- Admission Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-hospital me-2"></i>Admission Details
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td>Ward</td><td><strong>{{ admission.ward.name }}</strong></td></tr>
+                        <tr><td>Room</td><td><strong>{{ admission.room.room_number }} ({{ admission.room.get_room_type_display }})</strong></td></tr>
+                        <tr><td>Bed</td><td><strong>{{ admission.bed.bed_number }}</strong></td></tr>
+                        <tr><td>Admitted</td><td><strong>{{ admission.admission_date|date:"d M Y" }}</strong></td></tr>
+                        <tr><td>Status</td><td><span class="badge bg-success">{{ admission.get_status_display }}</span></td></tr>
+                        {% if admission.diagnosis %}
+                        <tr><td>Diagnosis</td><td>{{ admission.diagnosis }}</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <!-- Billing Summary -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <i class="bi bi-receipt me-2"></i>Billing Summary
+                </div>
+                <div class="card-body">
+                    <table class="table mb-0">
+                        <tr>
+                            <td>Nightly Rate</td>
+                            <td class="text-end">KSh {{ admission.ward.price_per_night|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Nights Stayed</td>
+                            <td class="text-end">{{ admission.nights_stayed }}</td>
+                        </tr>
+                        <tr class="table-primary">
+                            <td><strong>Total Ward Charge</strong></td>
+                            <td class="text-end"><strong>KSh {{ admission.ward_charge|floatformat:2 }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Discharge Confirmation -->
+            <div class="card mb-4 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Discharge Confirmation
+                </div>
+                <div class="card-body">
+                    <p>Discharging <strong>{{ admission.patient.full_name }}</strong> from
+                       <strong>{{ admission.ward.name }} - Room {{ admission.room.room_number }} Bed {{ admission.bed.bed_number }}</strong>.</p>
+                    <p>This will:</p>
+                    <ul>
+                        <li>Free the bed and room for the next patient</li>
+                        <li>Bill <strong>KSh {{ admission.ward_charge|floatformat:2 }}</strong> ({{ admission.nights_stayed }} nights × KSh {{ admission.ward.price_per_night|floatformat:2 }})</li>
+                        <li>Mark the visit as <strong>Discharged</strong></li>
+                    </ul>
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-lg w-100"
+                                onclick="return confirm('Are you sure you want to discharge {{ admission.patient.full_name }}?')">
+                            <i class="bi bi-box-arrow-right me-2"></i>Confirm Discharge
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

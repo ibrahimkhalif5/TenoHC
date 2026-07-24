@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-receipt me-2"></i>Invoice {{ invoice.invoice_number }}
+        </h5>
+        <div>
+            {% if invoice.balance > 0 %}
+            <a href="{% url 'cashier:cashier-pay' invoice.id %}" class="btn btn-success btn-sm">
+                <i class="bi bi-cash me-1"></i>Receive Payment
+            </a>
+            {% endif %}
+            <a href="{% url 'billing:invoice-preview' invoice.id %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-eye me-1"></i>Preview Invoice
+            </a>
+            <a href="{% url 'billing:invoice-pdf' invoice.id %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+            </a>
+            <a href="{% url 'billing:invoice-docx' invoice.id %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-file-earmark-word me-1"></i>Word
+            </a>
+            <a href="{% url 'cashier:billing-list' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-person me-2"></i>Patient Info
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td>Patient</td><td><strong>{{ invoice.patient.full_name }}</strong></td></tr>
+                        <tr><td>Patient #</td><td>{{ invoice.patient.patient_number }}</td></tr>
+                        <tr><td>Visit</td><td>{{ invoice.visit.visit_number }}</td></tr>
+                        <tr><td>Invoice Date</td><td>{{ invoice.created_at|date:"d M Y H:i" }}</td></tr>
+                        <tr>
+                            <td>Status</td>
+                            <td>
+                                {% if invoice.status == "PAID" %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% elif invoice.status == "PARTIALLY_PAID" %}
+                                    <span class="badge bg-info">Partially Paid</span>
+                                {% elif invoice.status == "PENDING" %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ invoice.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-calculator me-2"></i>Summary
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td>Total Amount</td><td class="text-end"><strong>KSh {{ invoice.total_amount|floatformat:2 }}</strong></td></tr>
+                        <tr><td>Amount Paid</td><td class="text-end text-success">KSh {{ invoice.amount_paid|floatformat:2 }}</td></tr>
+                        <tr class="table-{% if invoice.balance > 0 %}danger{% else %}success{% endif %}">
+                            <td><strong>Outstanding Balance</strong></td>
+                            <td class="text-end"><strong>KSh {{ invoice.balance|floatformat:2 }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Line Items -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <i class="bi bi-list-ul me-2"></i>Line Items
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Description</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-end">Unit Price</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in invoice.items.all %}
+                    <tr>
+                        <td>{{ item.description }}</td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-end">KSh {{ item.unit_price|floatformat:2 }}</td>
+                        <td class="text-end">KSh {{ item.total_price|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-primary">
+                        <td colspan="3"><strong>Total</strong></td>
+                        <td class="text-end"><strong>KSh {{ invoice.total_amount|floatformat:2 }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- Payment History -->
+    {% if payments %}
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <i class="bi bi-cash-stack me-2"></i>Payment History
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Receipt #</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th>Date</th>
+                        <th>Received By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'cashier:cashier-receipt' p.id %}">
+                                {{ p.receipt_number }}
+                            </a>
+                        </td>
+                        <td class="text-success"><strong>KSh {{ p.amount|floatformat:2 }}</strong></td>
+                        <td><span class="badge bg-secondary">{{ p.get_payment_method_display }}</span></td>
+                        <td>{{ p.reference_number|default:"-" }}</td>
+                        <td>{{ p.created_at|date:"d M Y H:i" }}</td>
+                        <td>{{ p.received_by|default:"System" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

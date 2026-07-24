@@ -1,0 +1,665 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Conduct Consultation - THHIMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="bi bi-chat-dots me-2"></i>
+            {% if is_review %}Review Results{% else %}Conduct Consultation{% endif %}
+        </h5>
+        <a href="{% url 'consultation:consultation-list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Queue
+        </a>
+    </div>
+
+    {% if is_review %}
+    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <div>
+            <strong>Patient returned from diagnostic testing.</strong>
+            Review the completed lab and radiology results below before proceeding.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Patient Info Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-person me-2"></i>Patient Information</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td>Name</td><td><strong>{{ patient.full_name }}</strong></td></tr>
+                        <tr><td>Patient #</td><td>{{ patient.patient_number }}</td></tr>
+                        <tr><td>Visit #</td><td>{{ visit.visit_number }}</td></tr>
+                        <tr><td>Age/Gender</td><td>{{ patient.age }} yrs / {{ patient.get_gender_display }}</td></tr>
+                        <tr><td>Phone</td><td>{{ patient.phone }}</td></tr>
+                        <tr><td>Category</td><td>{{ patient.patient_category|default:"--" }}</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Triage Vitals -->
+            {% with assessment=visit.triage_assessments.last %}
+            {% if assessment %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-clipboard-pulse me-2"></i>Triage Vitals</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td>Temp</td><td>{{ assessment.temperature }} °C</td></tr>
+                        <tr><td>BP</td><td>{{ assessment.blood_pressure_systolic }}/{{ assessment.blood_pressure_diastolic }} mmHg</td></tr>
+                        <tr><td>Pulse</td><td>{{ assessment.pulse }} bpm</td></tr>
+                        <tr><td>RR</td><td>{{ assessment.respiratory_rate }} /min</td></tr>
+                        <tr><td>SpO2</td><td>{{ assessment.oxygen_saturation }}%</td></tr>
+                        <tr><td>Weight</td><td>{{ assessment.weight }} kg</td></tr>
+                        <tr><td>Height</td><td>{{ assessment.height }} cm</td></tr>
+                        <tr><td colspan="2"><hr class="my-1"></td></tr>
+                        <tr><td>Complaint</td><td>{{ assessment.chief_complaint|linebreaksbr }}</td></tr>
+                        {% if assessment.nurse_notes %}
+                        <tr><td>Nurse Notes</td><td>{{ assessment.nurse_notes|linebreaksbr }}</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- Visit Timeline -->
+            {% if timeline %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Visit Timeline</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                        {% for event in timeline %}
+                        <div class="list-group-item py-2 px-3">
+                            <div class="d-flex justify-content-between">
+                                <small class="fw-bold text-primary">{{ event.event_type }}</small>
+                                <small class="text-muted">{{ event.timestamp|date:"H:i" }}</small>
+                            </div>
+                            {% if event.description %}
+                            <small class="text-muted">{{ event.description|truncatewords:15 }}</small>
+                            {% endif %}
+                            {% if event.created_by %}
+                            <small class="text-muted d-block">by {{ event.created_by.get_short_name }}</small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Consultation Form -->
+        <div class="col-md-8">
+            <!-- Previous Lab Results -->
+            {% if previous_lab_requests %}
+            <div class="card mb-4 border-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-flask me-2"></i>Laboratory Results</h6>
+                    <div>
+                        <a href="{% url 'laboratory:lab-report-pdf' visit_id=visit.pk %}"
+                           class="btn btn-light btn-sm me-2" target="_blank">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                        </a>
+                        <span class="badge bg-light text-dark">{{ previous_lab_requests.count }} test(s)</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% for req in previous_lab_requests %}
+                    <div class="border-bottom p-3 {% if req.result_status == 'FINAL' %}bg-success bg-opacity-10{% elif req.is_completed %}bg-info bg-opacity-10{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong>{{ req.lab_test.name }}</strong>
+                                {% if req.lab_test.unit %}
+                                <small class="text-muted ms-1">({{ req.lab_test.unit }})</small>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if req.result_status == 'FINAL' %}
+                                    <span class="badge bg-success">FINAL</span>
+                                {% elif req.is_completed %}
+                                    <span class="badge bg-info">Completed</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                                <small class="text-muted ms-2">{{ req.completed_at|date:"d M Y H:i"|default:"--" }}</small>
+                            </div>
+                        </div>
+
+                        {% if req.result_values.all %}
+                        <!-- Structured Results Table -->
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-1">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Result</th>
+                                        <th>Unit</th>
+                                        <th>Normal Range</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rv in req.result_values.all %}
+                                    <tr>
+                                        <td><strong>{{ rv.parameter.name }}</strong></td>
+                                        <td class="fw-bold">{{ rv.value|default:"--" }}</td>
+                                        <td><small class="text-muted">{{ rv.parameter.unit|default:"--" }}</small></td>
+                                        <td><small class="text-muted">{{ rv.parameter.normal_range }}</small></td>
+                                        <td>
+                                            {% if rv.value and rv.parameter.normal_min is not None and rv.parameter.normal_max is not None %}
+                                                <span class="lab-flag"
+                                                      data-value="{{ rv.value }}"
+                                                      data-min="{{ rv.parameter.normal_min }}"
+                                                      data-max="{{ rv.parameter.normal_max }}"></span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <!-- Free-text Result -->
+                        <div class="mb-1">
+                            <small class="fw-bold text-muted">Result:</small>
+                            <span>{{ req.result|default:"<em class='text-muted'>Pending</em>"|safe }}</span>
+                        </div>
+                        <div>
+                            <small class="fw-bold text-muted">Reference:</small>
+                            <small class="text-muted">{{ req.lab_test.normal_range|default:"--" }}</small>
+                        </div>
+                        {% endif %}
+
+                        {% if req.remarks %}
+                        <div class="border-start border-3 border-info ps-2 mt-2">
+                            <small class="fw-bold text-muted">Remarks:</small>
+                            <small>{{ req.remarks|linebreaksbr }}</small>
+                        </div>
+                        {% endif %}
+
+                        {% if req.completed_by %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-person me-1"></i>Completed by {{ req.completed_by.get_short_name }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Previous Radiology Results -->
+            {% if previous_rad_requests %}
+            <div class="card mb-4 border-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-camera-reels me-2"></i>Radiology Results</h6>
+                    <span class="badge bg-light text-dark">{{ previous_rad_requests.count }} request(s)</span>
+                </div>
+                <div class="card-body p-0">
+                    {% for req in previous_rad_requests %}
+                    <div class="border-bottom p-3 {% if req.result_status == 'FINAL' %}bg-success bg-opacity-10{% elif req.is_completed %}bg-info bg-opacity-10{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ req.radiology_service.name }}</strong>
+                                <small class="text-muted ms-2">{{ req.radiology_service.get_service_type_display }}</small>
+                                {% if req.radiology_service.body_part %}
+                                    <small class="text-muted ms-1">({{ req.radiology_service.body_part }})</small>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if req.result_status == 'FINAL' %}
+                                    <span class="badge bg-success">FINAL</span>
+                                {% elif req.is_completed %}
+                                    <span class="badge bg-info">Completed</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                                <small class="text-muted ms-2">{{ req.completed_at|date:"d M Y H:i"|default:"--" }}</small>
+                            </div>
+                        </div>
+                        {% if req.findings %}
+                        <div class="mt-2">
+                            <small class="fw-bold text-muted">Findings:</small>
+                            <div class="border-start border-3 border-primary ps-2 mt-1">
+                                <small>{{ req.findings|linebreaksbr }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if req.impression %}
+                        <div class="mt-2">
+                            <small class="fw-bold text-muted">Impression:</small>
+                            <div class="border-start border-3 border-success ps-2 mt-1">
+                                <small>{{ req.impression|linebreaksbr }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if not req.findings and not req.impression %}
+                        <div class="mt-1">
+                            <small class="text-muted"><em>Pending</em></small>
+                        </div>
+                        {% endif %}
+                        {% if req.clinical_indication %}
+                        <div class="mt-1">
+                            <small class="text-muted"><strong>Clinical Indication:</strong> {{ req.clinical_indication }}</small>
+                        </div>
+                        {% endif %}
+                        {% if req.image %}
+                        <a href="{{ req.image.url }}" target="_blank" class="btn btn-outline-primary btn-sm mt-2">
+                            <i class="bi bi-image me-1"></i>View Image
+                        </a>
+                        {% endif %}
+                        {% if req.completed_by %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-person me-1"></i>Completed by {{ req.completed_by.get_short_name }}
+                                {% if req.completed_at %} on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Previous Consultations (if review) -->
+            {% if is_review and previous_consultations %}
+            <div class="card mb-4 border-secondary">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-chat-left-text me-2"></i>Previous Consultation Notes</h6>
+                </div>
+                <div class="card-body">
+                    {% for cons in previous_consultations %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <small class="text-muted">{{ cons.started_at|date:"d M Y H:i" }} - Dr. {{ cons.doctor.get_short_name|default:"N/A" }}</small>
+                        {% if cons.diagnosis %}
+                        <p class="mb-1"><strong>Diagnosis:</strong> {{ cons.diagnosis }}</p>
+                        {% endif %}
+                        {% if cons.notes %}
+                        <p class="mb-0"><small>{{ cons.notes|truncatewords:30 }}</small></p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Consultation Form -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>
+                        {% if is_review %}Doctor Review Notes{% else %}Consultation Notes{% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="consultation-form">
+                        {% csrf_token %}
+                        {% crispy form %}
+
+                        <!-- Lab Tests Section -->
+                        <hr>
+                        <div class="card border-info mb-3">
+                            <div class="card-header bg-info text-white d-flex align-items-center">
+                                <i class="bi bi-flask me-2"></i>
+                                <h6 class="mb-0">Order Lab Tests</h6>
+                                <small class="ms-2 opacity-75">(search and select items from the catalogue)</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="position-relative mb-2">
+                                    <input type="text" class="form-control" id="lab-search"
+                                           placeholder="Type to search lab tests..."
+                                           autocomplete="off">
+                                    <div id="lab-results" class="position-absolute w-100 bg-white border rounded shadow-sm d-none"
+                                         style="z-index: 1000; max-height: 250px; overflow-y: auto;"></div>
+                                </div>
+                                <div id="lab-selected" class="mb-2"></div>
+                                <div id="lab-empty" class="text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>No lab tests selected. Use the search above to add tests.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Radiology Section -->
+                        <div class="card border-warning mb-3">
+                            <div class="card-header bg-warning text-dark d-flex align-items-center">
+                                <i class="bi bi-camera-reels me-2"></i>
+                                <h6 class="mb-0">Order Radiology / Imaging</h6>
+                                <small class="ms-2 opacity-75">(search and select items from the catalogue)</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="position-relative mb-2">
+                                    <input type="text" class="form-control" id="rad-search"
+                                           placeholder="Type to search radiology services..."
+                                           autocomplete="off">
+                                    <div id="rad-results" class="position-absolute w-100 bg-white border rounded shadow-sm d-none"
+                                         style="z-index: 1000; max-height: 250px; overflow-y: auto;"></div>
+                                </div>
+                                <div id="rad-selected" class="mb-2"></div>
+                                <div id="rad-empty" class="text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>No radiology services selected. Use the search above to add imaging.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Prescriptions Section -->
+                        <hr>
+                        <h6 class="mb-3"><i class="bi bi-capsule me-2"></i>Prescriptions</h6>
+                        <div id="prescriptions-container">
+                            {{ prescription_formset.management_form }}
+                            {% for rx_form in prescription_formset %}
+                            <div class="prescription-form border rounded p-3 mb-3 bg-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong class="small">Prescription #{{ forloop.counter }}</strong>
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-rx" title="Remove">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                    {{ rx_form.DELETE }}
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Medicine</label>
+                                        <select name="prescriptions-{{ forloop.counter0 }}-medicine"
+                                                id="id_prescriptions-{{ forloop.counter0 }}-medicine"
+                                                class="form-select form-select-sm medicine-select">
+                                            <option value="">-- Select Medicine --</option>
+                                            {% for item in available_medicines %}
+                                            <option value="{{ item.pk }}">{{ item.item_code }} - {{ item.name }} (KSH {{ item.unit_price|floatformat:2 }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold">Dosage</label>
+                                        {{ rx_form.dosage }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold">Frequency</label>
+                                        {{ rx_form.frequency }}
+                                    </div>
+                                </div>
+                                <div class="row g-2 mt-1">
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold">Duration (days)</label>
+                                        {{ rx_form.duration_days }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="button" id="add-prescription" class="btn btn-outline-primary btn-sm mb-3">
+                            <i class="bi bi-plus-circle me-1"></i>Add Prescription
+                        </button>
+
+                        <!-- Admission Option -->
+                        <hr>
+                        <div class="card border-secondary mb-3">
+                            <div class="card-header bg-secondary text-white d-flex align-items-center">
+                                <i class="bi bi-hospital me-2"></i>
+                                <h6 class="mb-0">Admission</h6>
+                                <small class="ms-2 opacity-75">(optional)</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="request_admission" value="1" id="id_request_admission">
+                                    <label class="form-check-label" for="id_request_admission">
+                                        Admit this patient to the ward
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Patient will be moved to admission queue for bed assignment.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-wrap gap-2 justify-content-end mt-4">
+                            <button type="submit" name="action" value="order_tests"
+                                    class="btn btn-info text-white btn-lg">
+                                <i class="bi bi-flask me-1"></i>Order Tests
+                            </button>
+                            <button type="submit" name="action" value="admit"
+                                    class="btn btn-secondary btn-lg">
+                                <i class="bi bi-hospital me-1"></i>Prescribe & Admit
+                            </button>
+                            <button type="submit" name="action" value="complete"
+                                    class="btn btn-success btn-lg">
+                                <i class="bi bi-check-lg me-1"></i>Prescribe & Complete
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('prescriptions-container');
+    const addBtn = document.getElementById('add-prescription');
+    const totalForms = document.getElementById('id_prescriptions-TOTAL_FORMS');
+
+    // ── Generic Item Searchable Dropdown (for Lab & Radiology) ──
+    function initItemSearch(config) {
+        const searchInput = document.getElementById(config.searchId);
+        const resultsDiv = document.getElementById(config.resultsId);
+        const selectedDiv = document.getElementById(config.selectedId);
+        const emptyDiv = document.getElementById(config.emptyId);
+        const hiddenName = config.hiddenName;
+        const category = config.category || '';
+
+        if (!searchInput) return;
+
+        let selectedItems = {};
+        let debounceTimer;
+
+        function updateEmpty() {
+            const count = Object.keys(selectedItems).length;
+            if (emptyDiv) emptyDiv.style.display = count > 0 ? 'none' : 'block';
+        }
+
+        function addItem(item) {
+            if (selectedItems[item.id]) return;
+            selectedItems[item.id] = item;
+
+            const tag = document.createElement('div');
+            tag.className = 'd-inline-flex align-items-center bg-light border rounded px-2 py-1 mb-1 me-1';
+            tag.dataset.itemId = item.id;
+            tag.innerHTML =
+                '<input type="hidden" name="' + hiddenName + '" value="' + item.id + '">' +
+                '<span class="small">' + item.name +
+                ' <span class="badge bg-success">KSH ' + parseFloat(item.unit_price).toLocaleString() + '</span>' +
+                '</span>' +
+                ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size:0.6em;" aria-label="Remove"></button>';
+
+            tag.querySelector('.btn-close').addEventListener('click', function() {
+                delete selectedItems[item.id];
+                tag.remove();
+                updateEmpty();
+            });
+
+            selectedDiv.appendChild(tag);
+            updateEmpty();
+        }
+
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const query = this.value.trim();
+            if (query.length < 2) {
+                resultsDiv.classList.add('d-none');
+                return;
+            }
+            debounceTimer = setTimeout(function() {
+                const url = '/api/item-search-json/?q=' + encodeURIComponent(query) +
+                    (category ? '&category=' + encodeURIComponent(category) : '');
+                fetch(url)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        resultsDiv.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(function(item) {
+                                if (selectedItems[item.id]) return;
+                                const el = document.createElement('div');
+                                el.className = 'p-2 border-bottom';
+                                el.style.cursor = 'pointer';
+                                el.innerHTML = '<strong>' + item.name + '</strong>' +
+                                    ' <small class="text-muted">(' + item.item_code + ')</small>' +
+                                    ' <span class="badge bg-success">KSH ' + parseFloat(item.unit_price).toLocaleString() + '</span>' +
+                                    '<br><small class="text-muted">' + item.category_display + '</small>';
+                                el.addEventListener('click', function() {
+                                    addItem(item);
+                                    searchInput.value = '';
+                                    resultsDiv.classList.add('d-none');
+                                });
+                                el.addEventListener('mouseenter', function() {
+                                    this.style.backgroundColor = '#f0f4ff';
+                                });
+                                el.addEventListener('mouseleave', function() {
+                                    this.style.backgroundColor = '';
+                                });
+                                resultsDiv.appendChild(el);
+                            });
+                            resultsDiv.classList.remove('d-none');
+                        } else {
+                            resultsDiv.innerHTML = '<div class="p-2 text-center text-muted"><small>No items found</small></div>';
+                            resultsDiv.classList.remove('d-none');
+                        }
+                    });
+            }, 300);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+                resultsDiv.classList.add('d-none');
+            }
+        });
+    }
+
+    initItemSearch({
+        searchId: 'lab-search',
+        resultsId: 'lab-results',
+        selectedId: 'lab-selected',
+        emptyId: 'lab-empty',
+        hiddenName: 'lab_tests',
+        category: 'LAB_TEST',
+    });
+
+    initItemSearch({
+        searchId: 'rad-search',
+        resultsId: 'rad-results',
+        selectedId: 'rad-selected',
+        emptyId: 'rad-empty',
+        hiddenName: 'radiology_services',
+        category: 'RADIOLOGY,ULTRASOUND',
+    });
+
+    // ── X button removes prescription ──
+    container.addEventListener('click', function(e) {
+        var btn = e.target.closest('.remove-rx');
+        if (!btn) return;
+        var form = btn.closest('.prescription-form');
+        if (!form) return;
+        var del = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (del) { del.checked = true; }
+        form.style.display = 'none';
+    });
+
+    // ── Add Prescription (dropdown clone) ──
+    if (addBtn && container && totalForms) {
+        addBtn.addEventListener('click', function() {
+            const formCount = parseInt(totalForms.value);
+            const maxForms = parseInt(document.getElementById('id_prescriptions-MAX_NUM_FORMS').value);
+            if (formCount >= maxForms) {
+                alert('Maximum of ' + maxForms + ' prescriptions allowed.');
+                return;
+            }
+
+            // Find last visible form to clone from
+            const allForms = container.querySelectorAll('.prescription-form');
+            var lastForm = null;
+            for (var i = allForms.length - 1; i >= 0; i--) {
+                if (allForms[i].style.display !== 'none') {
+                    lastForm = allForms[i];
+                    break;
+                }
+            }
+            if (!lastForm) lastForm = allForms[allForms.length - 1];
+            if (!lastForm) return;
+
+            const clone = lastForm.cloneNode(true);
+            clone.style.display = '';
+
+            // Rename all form inputs
+            clone.querySelectorAll('input, select, textarea').forEach(function(input) {
+                const name = input.getAttribute('name');
+                if (name) {
+                    const newName = name.replace(/prescriptions-(\d+)-/, 'prescriptions-' + formCount + '-');
+                    input.setAttribute('name', newName);
+                    input.setAttribute('id', 'id_' + newName);
+                    if (input.type !== 'checkbox' && input.type !== 'hidden') {
+                        input.value = '';
+                    }
+                    if (input.type === 'checkbox') {
+                        input.checked = false;
+                    }
+                }
+            });
+
+            // Update labels
+            clone.querySelectorAll('label').forEach(function(label) {
+                const htmlFor = label.getAttribute('for');
+                if (htmlFor) {
+                    label.setAttribute('for', htmlFor.replace(/id_prescriptions-(\d+)-/, 'id_prescriptions-' + formCount + '-'));
+                }
+            });
+
+            // Update heading
+            const strong = clone.querySelector('strong');
+            if (strong) {
+                strong.textContent = 'Prescription #' + (formCount + 1);
+            }
+
+            container.appendChild(clone);
+            totalForms.value = formCount + 1;
+        });
+    }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.lab-flag').forEach(function(el) {
+        var val = parseFloat(el.dataset.value);
+        var min = parseFloat(el.dataset.min);
+        var max = parseFloat(el.dataset.max);
+        if (isNaN(val) || isNaN(min) || isNaN(max)) return;
+        if (val < min) {
+            el.className = 'badge bg-primary';
+            el.textContent = 'LOW';
+        } else if (val > max) {
+            el.className = 'badge bg-danger';
+            el.textContent = 'HIGH';
+        } else {
+            el.className = 'badge bg-success';
+            el.textContent = 'NORMAL';
+        }
+    });
+});
+</script>
+{% endblock %}
