@@ -21,9 +21,7 @@ def main():
         BUNDLE_DIR = os.path.dirname(os.path.abspath(__file__))
         EXE_DIR = BUNDLE_DIR
 
-    # Static/template files are inside the bundle (read-only)
     os.environ["TENOHMS_BUNDLE_DIR"] = BUNDLE_DIR
-    # Writable data (db, media, logs) lives next to the exe
     os.environ["TENOHMS_DATA_DIR"] = EXE_DIR
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tenohms.settings.desktop")
 
@@ -40,10 +38,11 @@ def main():
     from django.core.management import call_command
     try:
         call_command("migrate", "--run-syncdb", verbosity=0)
+        print("  Database ready.")
     except Exception as e:
-        print(f"Migration warning: {e}")
+        print(f"  Migration warning: {e}")
 
-    # ── Create default admin if no users exist ─────────────
+    # ── Create admin user if needed ────────────────────────
     from django.contrib.auth import get_user_model
     User = get_user_model()
     if not User.objects.exists():
@@ -60,6 +59,21 @@ def main():
             print("  Default admin created — username: hassan  password: admin123")
         except Exception as e:
             print(f"  Admin creation warning: {e}")
+
+    # ── Seed master data (always, commands use get_or_create) ──
+    seed_commands = [
+        "seed_wards",
+        "seed_lab_tests",
+        "seed_lab_templates",
+        "seed_medicines",
+        "seed_radiology_services",
+    ]
+    for cmd in seed_commands:
+        try:
+            call_command(cmd, verbosity=0)
+            print(f"  Seeded: {cmd}")
+        except Exception as e:
+            print(f"  Seed warning ({cmd}): {e}")
 
     # ── Find port ──────────────────────────────────────────
     port = 8000
