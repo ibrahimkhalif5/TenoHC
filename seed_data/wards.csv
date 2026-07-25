@@ -1,0 +1,4 @@
+name,ward_type,description,price_per_night
+General Ward,GENERAL,Standard ward for general patients,5000
+Executive Ward,EXECUTIVE,Premium ward with private rooms,15000
+VIP Ward,VIP,VIP ward with luxury amenities,25000

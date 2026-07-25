@@ -1,0 +1,22 @@
+name,category,price,normal_range,unit,turnaround_time
+Full Blood Count (FBC),HAEMATOLOGY,3500,WBC: 4.5-11.0 x10^9/L,x10^9/L,24 hours
+Haemoglobin,HAEMATOLOGY,2000,12.0-16.0 g/dL,g/dL,24 hours
+Erythrocyte Sedimentation Rate (ESR),HAEMATOLOGY,1500,0-20 mm/hr,mm/hr,24 hours
+Platelet Count,HAEMATOLOGY,2500,150-400 x10^9/L,x10^9/L,24 hours
+Blood Sugar (Fasting),CHEMISTRY,2000,70-100 mg/dL,mg/dL,2 hours
+Blood Sugar (Random),CHEMISTRY,2000,70-140 mg/dL,mg/dL,2 hours
+Liver Function Test (LFT),CHEMISTRY,5000,ALT: 7-56 U/L,U/L,24 hours
+Kidney Function Test (KFT),CHEMISTRY,5000,Creatinine: 0.6-1.2 mg/dL,mg/dL,24 hours
+Lipid Profile,CHEMISTRY,4500,Total Cholesterol: <200 mg/dL,mg/dL,24 hours
+Electrolytes,CHEMISTRY,4000,Na: 135-145 mEq/L,mEq/L,4 hours
+Uric Acid,CHEMISTRY,3000,3.5-7.0 mg/dL,mg/dL,24 hours
+Malaria Parasite (MP),MICROBIOLOGY,2000,Negative,,2 hours
+Urinalysis (UA),MICROBIOLOGY,1500,"Clear, yellow, pH 4.5-8.0",,2 hours
+Urine Culture & Sensitivity,MICROBIOLOGY,5000,No growth,,48 hours
+Stool Analysis,MICROBIOLOGY,2000,No ova or parasites,,4 hours
+Blood Culture & Sensitivity,MICROBIOLOGY,6000,No growth,,48 hours
+HIV Test,IMMUNOLOGY,3000,Non-reactive,,2 hours
+Hepatitis B Surface Antigen (HBsAg),IMMUNOLOGY,3500,Non-reactive,,4 hours
+Pregnancy Test (hCG),IMMUNOLOGY,2000,Negative,,30 minutes
+Blood Group & Rhesus,PATHOLOGY,2500,N/A,,2 hours
+Prothrombin Time (PT),PATHOLOGY,3500,11-13.5 seconds,seconds,4 hours

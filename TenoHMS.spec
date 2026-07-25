@@ -11,6 +11,7 @@ ROOT = os.path.abspath('.')
 datas = [
     ('templates', 'templates'),
     ('static', 'static'),
+    ('seed_data', 'seed_data'),
 ]
 
 if os.path.isdir('staticfiles'):
@@ -85,6 +86,9 @@ a = Analysis(
         'accounts.management.commands',
         'core',
         'core.templatetags.core_tags',
+        'core.management',
+        'core.management.commands',
+        'core.management.commands.load_seed_csv',
         'dashboard',
         'patients',
         'triage',
@@ -96,6 +100,7 @@ a = Analysis(
         'admission',
         'admission.management',
         'admission.management.commands',
+        'admission.management.commands.seed_wards',
         'discharge',
         'wards',
         'nursing',
@@ -104,7 +109,15 @@ a = Analysis(
         'inventory',
         'inventory.management',
         'inventory.management.commands',
+        'inventory.management.commands.seed_medicines',
         'reports',
+        'laboratory.management',
+        'laboratory.management.commands',
+        'laboratory.management.commands.seed_lab_templates',
+        'laboratory.management.commands.seed_lab_tests',
+        'radiology.management',
+        'radiology.management.commands',
+        'radiology.management.commands.seed_radiology_services',
     ],
     hookspath=[],
     hooksconfig={},
