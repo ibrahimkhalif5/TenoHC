@@ -5,13 +5,21 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files, coll
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tenohms.settings.desktop")
 
+import django
+django_locale = os.path.join(os.path.dirname(django.__file__), 'conf', 'locale')
+
 block_cipher = None
 ROOT = os.path.abspath('.')
 
 datas = [
     ('templates', 'templates'),
     ('static', 'static'),
+    (django_locale, 'django/conf/locale'),
 ]
+
+# Collect Django's own data files (locale, templates, etc.)
+django_datas = collect_data_files('django', include_py_files=False)
+datas.extend([(src, dst) for src, dst in django_datas])
 
 if os.path.isdir('staticfiles'):
     datas.append(('staticfiles', 'staticfiles'))
