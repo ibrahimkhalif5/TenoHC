@@ -34,3 +34,6 @@ Thumbs.db
 venv/
 .venv/
 *.egg
+
+# PyInstaller
+*.spec.bak
