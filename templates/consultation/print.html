@@ -163,7 +163,6 @@
                         <td>{{ rv.parameter.normal_range }}</td>
                         <td>
                             {% if rv.value and rv.parameter.normal_min is not None and rv.parameter.normal_max is not None %}
-                                {% with val=rv.value|floatval min=rv.parameter.normal_min max=rv.parameter.normal_max %}
                                 <script>
                                     (function() {
                                         var v = parseFloat('{{ rv.value }}');
@@ -176,7 +175,6 @@
                                         }
                                     })();
                                 </script>
-                                {% endwith %}
                             {% endif %}
                         </td>
                     </tr>
