@@ -43,6 +43,20 @@ def main():
     except Exception as e:
         print(f"Migration warning: {e}")
 
+    # ── Create default admin if no users exist ─────────────
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    if not User.objects.exists():
+        try:
+            User.objects.create_superuser(
+                username="admin",
+                email="admin@tenohms.local",
+                password="admin123",
+            )
+            print("  Default admin created — username: admin  password: admin123")
+        except Exception as e:
+            print(f"  Admin creation warning: {e}")
+
     # ── Find port ──────────────────────────────────────────
     port = 8000
     for p in range(8000, 9000):
