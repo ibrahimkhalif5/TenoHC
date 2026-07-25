@@ -89,6 +89,7 @@ a = Analysis(
         'core.management',
         'core.management.commands',
         'core.management.commands.load_seed_csv',
+        'core.management.commands.seed_item_master',
         'dashboard',
         'patients',
         'triage',

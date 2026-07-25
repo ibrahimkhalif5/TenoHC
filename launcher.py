@@ -81,6 +81,13 @@ def main():
     except Exception as e:
         print(f"  Seed warning (seed_lab_templates): {e}")
 
+    # Item Master (used by consultation prescriptions, lab/rad search)
+    try:
+        call_command("seed_item_master", verbosity=0)
+        print(f"  Seeded: seed_item_master")
+    except Exception as e:
+        print(f"  Seed warning (seed_item_master): {e}")
+
     # ── Find port ──────────────────────────────────────────
     port = 8000
     for p in range(8000, 9000):
