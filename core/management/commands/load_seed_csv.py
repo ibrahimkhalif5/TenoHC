@@ -4,6 +4,7 @@ Usage: python manage.py load_seed_csv
 """
 import csv
 import os
+import sys
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
@@ -11,20 +12,42 @@ from django.conf import settings
 class Command(BaseCommand):
     help = "Load seed data from CSV files in seed_data/ directory"
 
-    def handle(self, *args, **options):
-        # Find seed_data directory
+    def _find_seed_dir(self):
+        candidates = []
+
+        # Frozen exe: check _MEIPASS
+        if getattr(sys, 'frozen', False):
+            candidates.append(os.path.join(sys._MEIPASS, 'seed_data'))
+
+        # Environment variable from launcher
+        bundle = os.environ.get('TENOHMS_BUNDLE_DIR')
+        if bundle:
+            candidates.append(os.path.join(bundle, 'seed_data'))
+
+        # settings.BASE_DIR
         base = getattr(settings, 'BASE_DIR', None)
-        if base is None:
-            base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if base:
+            candidates.append(os.path.join(str(base), 'seed_data'))
 
-        seed_dir = os.path.join(str(base), 'seed_data')
-        if not os.path.isdir(seed_dir):
-            # Try relative to project root
-            seed_dir = os.path.join(os.getcwd(), 'seed_data')
+        # Current working directory
+        candidates.append(os.path.join(os.getcwd(), 'seed_data'))
 
-        if not os.path.isdir(seed_dir):
-            self.stdout.write(self.style.ERROR(f"seed_data directory not found"))
+        # Script location fallback
+        candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'seed_data'))
+
+        for path in candidates:
+            path = os.path.normpath(path)
+            if os.path.isdir(path):
+                return path
+        return None
+
+    def handle(self, *args, **options):
+        seed_dir = self._find_seed_dir()
+        if not seed_dir:
+            self.stdout.write(self.style.ERROR("seed_data directory not found"))
             return
+
+        self.stdout.write(f"Loading seed data from: {seed_dir}")
 
         self._load_categories(seed_dir)
         self._load_suppliers(seed_dir)
