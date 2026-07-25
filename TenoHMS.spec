@@ -3,6 +3,8 @@ import os
 import sys
 from PyInstaller.utils.hooks import collect_submodules
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tenohms.settings.desktop")
+
 block_cipher = None
 ROOT = os.path.abspath('.')
 
