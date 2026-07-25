@@ -61,10 +61,25 @@ def main():
             print(f"  Admin creation warning: {e}")
 
     # ── Seed master data (always, commands use get_or_create) ──
+    seed_commands = [
+        "seed_wards",
+        "seed_lab_tests",
+        "seed_medicines",
+        "seed_radiology_services",
+    ]
+    for cmd in seed_commands:
+        try:
+            call_command(cmd, verbosity=0)
+            print(f"  Seeded: {cmd}")
+        except Exception as e:
+            print(f"  Seed warning ({cmd}): {e}")
+
+    # Lab templates depend on lab tests existing first
     try:
-        call_command("load_seed_csv", verbosity=1)
+        call_command("seed_lab_templates", verbosity=0)
+        print(f"  Seeded: seed_lab_templates")
     except Exception as e:
-        print(f"  Seed warning: {e}")
+        print(f"  Seed warning (seed_lab_templates): {e}")
 
     # ── Find port ──────────────────────────────────────────
     port = 8000
