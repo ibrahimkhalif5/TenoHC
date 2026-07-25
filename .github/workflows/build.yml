@@ -1,0 +1,72 @@
+name: Build Windows EXE
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Run collectstatic
+        run: python manage.py collectstatic --noinput
+        env:
+          DJANGO_SETTINGS_MODULE: tenohms.settings.desktop
+          DJANGO_SECRET_KEY: build-key-not-for-production
+          TENOHMS_BASE_DIR: .
+
+      - name: Build EXE
+        run: pyinstaller TenoHMS.spec --clean --noconfirm
+
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: TenoHMS-Windows
+          path: dist/TenoHMS/
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Run collectstatic
+        run: python manage.py collectstatic --noinput
+        env:
+          DJANGO_SETTINGS_MODULE: tenohms.settings.desktop
+          DJANGO_SECRET_KEY: build-key-not-for-production
+          TENOHMS_BASE_DIR: .
+
+      - name: Build App
+        run: pyinstaller TenoHMS.spec --clean --noconfirm
+
+      - name: Upload Mac App
+        uses: actions/upload-artifact@v4
+        with:
+          name: TenoHMS-Mac
+          path: dist/TenoHMS/
