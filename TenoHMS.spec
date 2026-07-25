@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
 import sys
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_all
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tenohms.settings.desktop")
 
@@ -21,6 +21,20 @@ if os.path.isfile('db.sqlite3'):
     datas.append(('db.sqlite3', '.'))
 if os.path.isfile('.env'):
     datas.append(('.env', '.'))
+
+# Collect all data and metadata for packages that need it
+for pkg in [
+    'django_bootstrap5',
+    'crispy_forms',
+    'crispy_bootstrap5',
+    'django_filter',
+    'django_tables2',
+    'import_export',
+    'django_htmx',
+    'whitenoise',
+]:
+    pkg_datas, pkg_binaries, pkg_hiddenimports = collect_all(pkg)
+    datas.extend([(src, dst) for src, dst in pkg_datas])
 
 a = Analysis(
     ['launcher.py'],
@@ -69,7 +83,9 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        'django.contrib.gis',
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
