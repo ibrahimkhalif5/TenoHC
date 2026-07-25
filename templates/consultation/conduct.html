@@ -10,9 +10,15 @@
             <i class="bi bi-chat-dots me-2"></i>
             {% if is_review %}Review Results{% else %}Conduct Consultation{% endif %}
         </h5>
-        <a href="{% url 'consultation:consultation-list' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-1"></i>Back to Queue
-        </a>
+        <div>
+            <a href="{% url 'consultation:consultation-print' consultation_id=consultation.pk %}" 
+               class="btn btn-outline-primary btn-sm me-2" target="_blank">
+                <i class="bi bi-printer me-1"></i>Print Report
+            </a>
+            <a href="{% url 'consultation:consultation-list' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to Queue
+            </a>
+        </div>
     </div>
 
     {% if is_review %}

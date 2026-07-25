@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Consultation Report - {{ patient.full_name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #222; padding: 20px; }
+        .header { text-align: center; border-bottom: 3px solid #0d6efd; padding-bottom: 10px; margin-bottom: 15px; }
+        .header h2 { color: #0d6efd; font-size: 20px; }
+        .header p { color: #555; font-size: 11px; }
+        .section { margin-bottom: 15px; }
+        .section-title { background: #0d6efd; color: #fff; padding: 5px 10px; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { border: 1px solid #dee2e6; padding: 5px 8px; text-align: left; font-size: 11px; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+        .info-grid .item { display: flex; padding: 3px 0; border-bottom: 1px dotted #ddd; }
+        .info-grid .label { font-weight: 600; width: 130px; flex-shrink: 0; }
+        .badge-low { background: #0d6efd; color: #fff; padding: 1px 6px; border-radius: 3px; font-size: 10px; }
+        .badge-high { background: #dc3545; color: #fff; padding: 1px 6px; border-radius: 3px; font-size: 10px; }
+        .badge-normal { background: #198754; color: #fff; padding: 1px 6px; border-radius: 3px; font-size: 10px; }
+        .badge-status { padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+        .badge-final { background: #198754; color: #fff; }
+        .badge-pending { background: #ffc107; color: #222; }
+        .badge-completed { background: #0dcaf0; color: #222; }
+        .rx-table td { font-size: 11px; }
+        .footer { text-align: center; border-top: 2px solid #dee2e6; padding-top: 10px; margin-top: 20px; font-size: 10px; color: #888; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 10px; }
+        .sig-block { width: 45%; text-align: center; }
+        .sig-line { border-top: 1px solid #222; margin-top: 40px; padding-top: 5px; font-size: 11px; }
+        @media print {
+            body { padding: 10px; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align: center; margin-bottom: 10px;">
+        <button onclick="window.print()" style="padding: 8px 24px; background: #0d6efd; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+            Print Report
+        </button>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h2>TENOCARE HOSPITAL</h2>
+        <p>Consultation Report &amp; Patient Summary</p>
+    </div>
+
+    <!-- Patient Info -->
+    <div class="section">
+        <div class="section-title">PATIENT INFORMATION</div>
+        <div class="info-grid">
+            <div class="item"><span class="label">Full Name:</span> {{ patient.full_name }}</div>
+            <div class="item"><span class="label">Patient No:</span> {{ patient.patient_number }}</div>
+            <div class="item"><span class="label">Age / Gender:</span> {{ patient.age }} yrs / {{ patient.get_gender_display }}</div>
+            <div class="item"><span class="label">Phone:</span> {{ patient.phone|default:"--" }}</div>
+            <div class="item"><span class="label">Category:</span> {{ patient.patient_category|default:"General" }}</div>
+            <div class="item"><span class="label">Visit No:</span> {{ visit.visit_number }}</div>
+            <div class="item"><span class="label">Visit Date:</span> {{ visit.created_at|date:"d M Y H:i" }}</div>
+            <div class="item"><span class="label">Doctor:</span> Dr. {{ consultation.doctor.get_full_name|default:consultation.doctor.username }}</div>
+        </div>
+    </div>
+
+    <!-- Triage Vitals -->
+    {% with assessment=visit.triage_assessments.last %}
+    {% if assessment %}
+    <div class="section">
+        <div class="section-title">TRIAGE VITALS</div>
+        <table>
+            <tr>
+                <th>Temp (°C)</th><th>BP (mmHg)</th><th>Pulse (bpm)</th><th>RR (/min)</th><th>SpO2 (%)</th><th>Weight (kg)</th><th>Height (cm)</th>
+            </tr>
+            <tr>
+                <td>{{ assessment.temperature }}</td>
+                <td>{{ assessment.blood_pressure_systolic }}/{{ assessment.blood_pressure_diastolic }}</td>
+                <td>{{ assessment.pulse }}</td>
+                <td>{{ assessment.respiratory_rate }}</td>
+                <td>{{ assessment.oxygen_saturation }}</td>
+                <td>{{ assessment.weight }}</td>
+                <td>{{ assessment.height }}</td>
+            </tr>
+        </table>
+        {% if assessment.chief_complaint %}
+        <p><strong>Chief Complaint:</strong> {{ assessment.chief_complaint }}</p>
+        {% endif %}
+        {% if assessment.nurse_notes %}
+        <p><strong>Nurse Notes:</strong> {{ assessment.nurse_notes }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Consultation Notes -->
+    <div class="section">
+        <div class="section-title">CONSULTATION NOTES</div>
+        <table>
+            <tr><th style="width:150px;">Diagnosis</th><td>{{ consultation.diagnosis|default:"--" }}</td></tr>
+            <tr><th>Notes</th><td>{{ consultation.notes|default:"--" }}</td></tr>
+            <tr><th>Started</th><td>{{ consultation.started_at|date:"d M Y H:i" }}</td></tr>
+            {% if consultation.completed_at %}
+            <tr><th>Completed</th><td>{{ consultation.completed_at|date:"d M Y H:i" }}</td></tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <!-- Prescriptions -->
+    {% if consultation.prescriptions.all %}
+    <div class="section">
+        <div class="section-title">PRESCRIPTIONS</div>
+        <table class="rx-table">
+            <thead>
+                <tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Qty</th><th>Route</th></tr>
+            </thead>
+            <tbody>
+                {% for rx in consultation.prescriptions.all %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ rx.medicine.name|default:rx.medicine_name }}</td>
+                    <td>{{ rx.dosage }}</td>
+                    <td>{{ rx.frequency }}</td>
+                    <td>{{ rx.duration_days }} days</td>
+                    <td>{{ rx.quantity }}</td>
+                    <td>{{ rx.route|default:"Oral" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Laboratory Results -->
+    {% if previous_lab_requests %}
+    <div class="section">
+        <div class="section-title">LABORATORY RESULTS</div>
+        {% for req in previous_lab_requests %}
+        <div style="margin-bottom: 12px; border: 1px solid #dee2e6; padding: 8px; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <strong>{{ req.lab_test.name }}</strong>
+                <span>
+                    {% if req.result_status == 'FINAL' %}
+                        <span class="badge-status badge-final">FINAL</span>
+                    {% elif req.is_completed %}
+                        <span class="badge-status badge-completed">COMPLETED</span>
+                    {% else %}
+                        <span class="badge-status badge-pending">PENDING</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            {% if req.result_values.all %}
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Normal Range</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for rv in req.result_values.all %}
+                    <tr>
+                        <td><strong>{{ rv.parameter.name }}</strong></td>
+                        <td>{{ rv.value|default:"--" }}</td>
+                        <td>{{ rv.parameter.unit|default:"--" }}</td>
+                        <td>{{ rv.parameter.normal_range }}</td>
+                        <td>
+                            {% if rv.value and rv.parameter.normal_min is not None and rv.parameter.normal_max is not None %}
+                                {% with val=rv.value|floatval min=rv.parameter.normal_min max=rv.parameter.normal_max %}
+                                <script>
+                                    (function() {
+                                        var v = parseFloat('{{ rv.value }}');
+                                        var mn = parseFloat('{{ rv.parameter.normal_min }}');
+                                        var mx = parseFloat('{{ rv.parameter.normal_max }}');
+                                        if (!isNaN(v) && !isNaN(mn) && !isNaN(mx)) {
+                                            if (v < mn) document.write('<span class="badge-low">LOW</span>');
+                                            else if (v > mx) document.write('<span class="badge-high">HIGH</span>');
+                                            else document.write('<span class="badge-normal">NORMAL</span>');
+                                        }
+                                    })();
+                                </script>
+                                {% endwith %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p><strong>Result:</strong> {{ req.result|default:"Pending" }}</p>
+            {% endif %}
+
+            <p style="font-size: 10px; color: #888; margin-top: 4px;">
+                Reference: {{ req.lab_test.normal_range|default:"--" }}
+                {% if req.completed_by %} | Completed by {{ req.completed_by.get_short_name }}{% endif %}
+                {% if req.completed_at %} on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
+            </p>
+            {% if req.remarks %}
+            <p style="font-size: 11px;"><strong>Remarks:</strong> {{ req.remarks }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Radiology Results -->
+    {% if previous_rad_requests %}
+    <div class="section">
+        <div class="section-title">RADIOLOGY / IMAGING RESULTS</div>
+        {% for req in previous_rad_requests %}
+        <div style="margin-bottom: 12px; border: 1px solid #dee2e6; padding: 8px; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <strong>{{ req.radiology_service.name }}</strong>
+                <span>
+                    {% if req.result_status == 'FINAL' %}
+                        <span class="badge-status badge-final">FINAL</span>
+                    {% elif req.is_completed %}
+                        <span class="badge-status badge-completed">COMPLETED</span>
+                    {% else %}
+                        <span class="badge-status badge-pending">PENDING</span>
+                    {% endif %}
+                </span>
+            </div>
+            <p><strong>Type:</strong> {{ req.radiology_service.get_service_type_display }} ({{ req.radiology_service.body_part|default:"--" }})</p>
+            {% if req.findings %}
+            <p><strong>Findings:</strong> {{ req.findings }}</p>
+            {% endif %}
+            {% if req.impression %}
+            <p><strong>Impression:</strong> {{ req.impression }}</p>
+            {% endif %}
+            {% if req.clinical_indication %}
+            <p><strong>Clinical Indication:</strong> {{ req.clinical_indication }}</p>
+            {% endif %}
+            {% if not req.findings and not req.impression %}
+            <p style="color: #999;"><em>Pending results</em></p>
+            {% endif %}
+            <p style="font-size: 10px; color: #888; margin-top: 4px;">
+                {% if req.completed_by %}Completed by {{ req.completed_by.get_short_name }}{% endif %}
+                {% if req.completed_at %} on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Previous Consultations -->
+    {% if previous_consultations %}
+    <div class="section">
+        <div class="section-title">PREVIOUS CONSULTATIONS</div>
+        {% for cons in previous_consultations %}
+        <div style="margin-bottom: 8px; border-bottom: 1px dotted #ddd; padding-bottom: 5px;">
+            <p><strong>Date:</strong> {{ cons.started_at|date:"d M Y H:i" }} | <strong>Doctor:</strong> Dr. {{ cons.doctor.get_full_name|default:cons.doctor.username }}</p>
+            {% if cons.diagnosis %}<p><strong>Diagnosis:</strong> {{ cons.diagnosis }}</p>{% endif %}
+            {% if cons.notes %}<p>{{ cons.notes|truncatewords:30 }}</p>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Signatures -->
+    <div class="signatures">
+        <div class="sig-block">
+            <div class="sig-line">Doctor's Signature &amp; Stamp</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-line">Patient's Signature</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>TENOCARE HOSPITAL &mdash; THHIMS &copy; {% now "Y" %} | Printed: {% now "d M Y H:i" %}</p>
+    </div>
+</body>
+</html>

@@ -351,3 +351,44 @@ class ConsultationHistoryView(LoginRequiredMixin, View):
             "consultations": consultations,
             "timeline": timeline,
         })
+
+
+class ConsultationPrintView(LoginRequiredMixin, View):
+    """Print-friendly view of patient details + lab/radiology reports."""
+
+    def get(self, request, consultation_id):
+        consultation = get_object_or_404(
+            Consultation.objects.select_related(
+                "visit", "visit__patient", "doctor",
+            ).prefetch_related(
+                "prescriptions", "prescriptions__medicine",
+            ),
+            pk=consultation_id,
+        )
+        visit = consultation.visit
+        patient = visit.patient
+
+        previous_lab_requests = visit.lab_requests.select_related(
+            "lab_test", "completed_by",
+        ).prefetch_related("result_values__parameter").order_by("-created_at")
+
+        previous_rad_requests = visit.radiology_requests.select_related(
+            "radiology_service", "completed_by",
+        ).order_by("-created_at")
+
+        previous_consultations = Consultation.objects.filter(
+            visit=visit,
+        ).exclude(pk=consultation.pk).select_related("doctor").order_by("-started_at")
+
+        from triage.services import get_visit_timeline
+        timeline = get_visit_timeline(visit)
+
+        return render(request, "consultation/print.html", {
+            "consultation": consultation,
+            "visit": visit,
+            "patient": patient,
+            "previous_lab_requests": previous_lab_requests,
+            "previous_rad_requests": previous_rad_requests,
+            "previous_consultations": previous_consultations,
+            "timeline": timeline,
+        })
