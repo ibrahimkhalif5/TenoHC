@@ -1,4 +1,5 @@
 import os
+import sys
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
@@ -9,6 +10,10 @@ SECRET_KEY = os.environ.get(
 )
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+
+# When frozen, set LOCALE_PATHS so Django finds translations
+if getattr(sys, 'frozen', False):
+    LOCALE_PATHS = [os.path.join(sys._MEIPASS, 'django', 'conf', 'locale')]
 
 # Bundle dir = read-only files (templates, static) bundled inside exe
 BUNDLE_DIR = os.environ.get("TENOHMS_BUNDLE_DIR", str(BASE_DIR))  # noqa: F405
