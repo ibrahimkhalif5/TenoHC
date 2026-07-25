@@ -6,18 +6,25 @@ from PyInstaller.utils.hooks import collect_submodules
 block_cipher = None
 ROOT = os.path.abspath('.')
 
+datas = [
+    ('templates', 'templates'),
+    ('static', 'static'),
+]
+
+if os.path.isdir('staticfiles'):
+    datas.append(('staticfiles', 'staticfiles'))
+if os.path.isdir('media'):
+    datas.append(('media', 'media'))
+if os.path.isfile('db.sqlite3'):
+    datas.append(('db.sqlite3', '.'))
+if os.path.isfile('.env'):
+    datas.append(('.env', '.'))
+
 a = Analysis(
     ['launcher.py'],
     pathex=[ROOT],
     binaries=[],
-    datas=[
-        ('templates', 'templates'),
-        ('static', 'static'),
-        ('staticfiles', 'staticfiles'),
-        ('media', 'media'),
-        ('db.sqlite3', '.'),
-        ('.env', '.'),
-    ],
+    datas=datas,
     hiddenimports=[
         *collect_submodules('django'),
         *collect_submodules('crispy_forms'),
@@ -31,6 +38,9 @@ a = Analysis(
         'tenohms.settings.desktop',
         'tenohms.settings.base',
         'accounts',
+        'accounts.templatetags',
+        'accounts.management',
+        'accounts.management.commands',
         'core',
         'core.templatetags.core_tags',
         'dashboard',
@@ -42,12 +52,16 @@ a = Analysis(
         'radiology',
         'pharmacy',
         'admission',
+        'admission.management',
+        'admission.management.commands',
         'discharge',
         'wards',
         'nursing',
         'billing',
         'cashier',
         'inventory',
+        'inventory.management',
+        'inventory.management.commands',
         'reports',
     ],
     hookspath=[],
