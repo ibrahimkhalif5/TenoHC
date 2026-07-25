@@ -18,19 +18,12 @@ SECRET_KEY = _secret
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()]
 
 # ---------------------------------------------------------------------------
-# Database — MySQL (PythonAnywhere free tier default)
-# Switch to PostgreSQL by setting DB_ENGINE=django.db.backends.postgresql
+# Database — SQLite (free PythonAnywhere plan)
 # ---------------------------------------------------------------------------
-DB_ENGINE = os.environ.get("DB_ENGINE", "django.db.backends.mysql")
-
 DATABASES = {
     "default": {
-        "ENGINE": DB_ENGINE,
-        "NAME": os.environ.get("DB_NAME", ""),
-        "USER": os.environ.get("DB_USER", ""),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", ""),
-        "PORT": os.environ.get("DB_PORT", ""),
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
     }
 }
 
