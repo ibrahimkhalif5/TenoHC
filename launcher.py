@@ -48,12 +48,16 @@ def main():
     User = get_user_model()
     if not User.objects.exists():
         try:
-            User.objects.create_superuser(
-                username="admin",
-                email="admin@tenohms.local",
+            admin_user = User.objects.create_superuser(
+                username="hassan",
+                email="hassan@tenohms.local",
                 password="admin123",
+                first_name="Hassan",
+                last_name="Adan",
             )
-            print("  Default admin created — username: admin  password: admin123")
+            admin_user.role = "ADMIN"
+            admin_user.save()
+            print("  Default admin created — username: hassan  password: admin123")
         except Exception as e:
             print(f"  Admin creation warning: {e}")
 
