@@ -54,4 +54,9 @@ urlpatterns = [
         views.DischargeMedicationRemoveView.as_view(),
         name="discharge-medication-remove",
     ),
+    path(
+        "api/diagnosis-suggestions/",
+        views.DiagnosisSuggestionsAPIView.as_view(),
+        name="diagnosis-suggestions-api",
+    ),
 ]

@@ -15,13 +15,16 @@
     .med-table th { font-size: 0.78rem; background: #f9fafb; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid #e5e7eb; }
     .med-table td { font-size: 0.85rem; vertical-align: middle; }
     .ds-badge { font-size: 0.78rem; font-weight: 600; padding: 0.3em 0.7em; border-radius: 6px; }
-    .med-search-wrap { position: relative; }
-    .med-search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; background: #fff; border: 1px solid #dee2e6; border-radius: 0 0 6px 6px; max-height: 220px; overflow-y: auto; display: none; box-shadow: 0 4px 12px rgba(0,0,0,.12); }
-    .med-search-results .med-result-item { padding: 6px 10px; cursor: pointer; font-size: 0.83rem; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; }
-    .med-search-results .med-result-item:hover { background: #f0f7ff; }
-    .med-search-results .med-result-item .med-name { font-weight: 600; color: #1f2937; }
-    .med-search-results .med-result-item .med-meta { color: #6b7280; font-size: 0.78rem; }
-    .med-search-results .med-no-results { padding: 8px 10px; color: #9ca3af; font-size: 0.83rem; }
+    .med-search-wrap, .diag-search-wrap { position: relative; }
+    .med-search-results, .diag-search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; background: #fff; border: 1px solid #dee2e6; border-radius: 0 0 6px 6px; max-height: 220px; overflow-y: auto; display: none; box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+    .med-search-results .med-result-item, .diag-search-results .diag-result-item { padding: 6px 10px; cursor: pointer; font-size: 0.83rem; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; }
+    .med-search-results .med-result-item:hover, .diag-search-results .diag-result-item:hover { background: #f0f7ff; }
+    .med-search-results .med-result-item .med-name, .diag-search-results .diag-result-item .diag-name { font-weight: 600; color: #1f2937; }
+    .med-search-results .med-result-item .med-meta, .diag-search-results .diag-result-item .diag-meta { color: #6b7280; font-size: 0.78rem; }
+    .med-search-results .med-no-results, .diag-search-results .diag-no-results { padding: 8px 10px; color: #9ca3af; font-size: 0.83rem; }
+    #save-status { font-size: 0.8rem; color: #6b7280; transition: opacity 0.3s; }
+    #save-status.saving { color: #f59e0b; }
+    #save-status.saved { color: #10b981; }
 </style>
 {% endblock %}
 
@@ -42,7 +45,8 @@
                 {% endif %}
             </small>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <span id="save-status"></span>
             <a href="{% url 'discharge:discharge-admission-list' %}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-left me-1"></i>Back
             </a>
@@ -64,7 +68,12 @@
         </div>
     </div>
 
-    <form method="post" action="{% url 'discharge:discharge-summary-save' summary.pk %}" id="dischargeForm">
+    <form method="post" action="{% url 'discharge:discharge-summary-save' summary.pk %}" id="dischargeForm"
+          hx-post="{% url 'discharge:discharge-summary-save' summary.pk %}"
+          hx-trigger="submit"
+          hx-target="#save-status"
+          hx-swap="innerHTML"
+          hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         {% csrf_token %}
 
         <!-- Patient Information -->
@@ -151,11 +160,17 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="id_primary_diagnosis" class="form-label fw-semibold small text-muted">Primary Diagnosis <span class="text-danger">*</span></label>
-                        {{ form.primary_diagnosis }}
+                        <div class="diag-search-wrap">
+                            {{ form.primary_diagnosis }}
+                            <div class="diag-search-results" id="primary-diag-results"></div>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label for="id_secondary_diagnosis" class="form-label fw-semibold small text-muted">Secondary Diagnosis</label>
-                        {{ form.secondary_diagnosis }}
+                        <div class="diag-search-wrap">
+                            {{ form.secondary_diagnosis }}
+                            <div class="diag-search-results" id="secondary-diag-results"></div>
+                        </div>
                     </div>
                     <div class="col-12">
                         <label for="id_reason_for_admission" class="form-label fw-semibold small text-muted">Reason for Admission</label>
@@ -239,51 +254,17 @@
         <div class="ds-section">
             <div class="ds-section-title">Medication on Discharge</div>
             <div class="ds-section-body">
-                {% if summary.discharge_medications.exists %}
-                <table class="table table-bordered med-table mb-3">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Medicine</th>
-                            <th>Dosage</th>
-                            <th>Frequency</th>
-                            <th>Duration</th>
-                            <th>Instructions</th>
-                            {% if summary.status != "FINALIZED" %}
-                            <th class="text-center" style="width:60px;">Action</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for med in summary.discharge_medications.all %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>{{ med.medicine_name }}</td>
-                            <td>{{ med.dosage|default:"—" }}</td>
-                            <td>{{ med.frequency|default:"—" }}</td>
-                            <td>{{ med.duration|default:"—" }}</td>
-                            <td>{{ med.instructions|default:"—" }}</td>
-                            {% if summary.status != "FINALIZED" %}
-                            <td class="text-center">
-                                <form method="post" action="{% url 'discharge:discharge-medication-remove' med.pk %}" class="d-inline"
-                                      onsubmit="return confirm('Remove this medication?')">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Remove">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <p class="text-muted mb-3">No discharge medications added yet.</p>
-                {% endif %}
+                <div id="medications-container">
+                    {% include "discharge/_medications_table.html" with summary=summary %}
+                </div>
 
                 {% if summary.status != "FINALIZED" %}
-                <form method="post" action="{% url 'discharge:discharge-medication-add' summary.pk %}">
+                <form id="med-add-form"
+                      hx-post="{% url 'discharge:discharge-medication-add' summary.pk %}"
+                      hx-target="#medications-container"
+                      hx-swap="innerHTML"
+                      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                      onsubmit="document.getElementById('med-add-btn').disabled=true; setTimeout(()=>document.getElementById('med-add-btn').disabled=false, 2000);">
                     {% csrf_token %}
                     <div class="row g-2 align-items-end">
                         <div class="col-md-3">
@@ -311,7 +292,7 @@
                             <input type="text" name="instructions" class="form-control" placeholder="e.g., After food">
                         </div>
                         <div class="col-md-1">
-                            <button type="submit" class="btn btn-success btn-sm w-100">
+                            <button type="submit" id="med-add-btn" class="btn btn-success btn-sm w-100">
                                 <i class="bi bi-plus"></i> Add
                             </button>
                         </div>
@@ -322,7 +303,7 @@
         </div>
 
     {% if summary.status != "FINALIZED" %}
-    <form method="post" action="{% url 'discharge:discharge-summary-save' summary.pk %}" id="dischargeForm">
+    <form method="post" action="{% url 'discharge:discharge-summary-save' summary.pk %}" id="dischargeForm2">
         {% csrf_token %}
     {% endif %}
 
@@ -417,7 +398,7 @@
         <!-- Save Button -->
         {% if summary.status != "FINALIZED" %}
         <div class="d-flex justify-content-end gap-2 mb-4">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" id="save-draft-btn">
                 <i class="bi bi-save me-1"></i>Save Draft
             </button>
         </div>
@@ -429,48 +410,131 @@
 {% block extra_js %}
 <script>
 (function() {
-    const input = document.getElementById('med-search-input');
-    const resultsBox = document.getElementById('med-search-results');
-    if (!input || !resultsBox) return;
-
-    let debounceTimer;
-    input.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        const q = this.value.trim();
-        if (q.length < 2) { resultsBox.style.display = 'none'; return; }
-
-        debounceTimer = setTimeout(() => {
-            fetch(`/inventory/api/medicines/?q=${encodeURIComponent(q)}`)
-                .then(r => r.json())
-                .then(data => {
-                    resultsBox.innerHTML = '';
-                    if (!data.results || data.results.length === 0) {
-                        resultsBox.innerHTML = '<div class="med-no-results">No medicines found</div>';
-                        resultsBox.style.display = 'block';
-                        return;
-                    }
-                    data.results.forEach(med => {
-                        const div = document.createElement('div');
-                        div.className = 'med-result-item';
-                        const meta = [med.strength, med.dosage_form].filter(Boolean).join(' &middot; ');
-                        div.innerHTML = `<span class="med-name">${med.name}</span><span class="med-meta">${meta ? meta + ' &middot; ' : ''}Stock: ${med.current_stock}</span>`;
-                        div.addEventListener('click', () => {
-                            input.value = med.name;
-                            resultsBox.style.display = 'none';
+    // ── Medicine Search ──
+    const medInput = document.getElementById('med-search-input');
+    const medResults = document.getElementById('med-search-results');
+    if (medInput && medResults) {
+        let medTimer;
+        medInput.addEventListener('input', function() {
+            clearTimeout(medTimer);
+            const q = this.value.trim();
+            if (q.length < 2) { medResults.style.display = 'none'; return; }
+            medTimer = setTimeout(() => {
+                fetch(`/inventory/api/medicines/?q=${encodeURIComponent(q)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        medResults.innerHTML = '';
+                        if (!data.results || data.results.length === 0) {
+                            medResults.innerHTML = '<div class="med-no-results">No medicines found</div>';
+                            medResults.style.display = 'block';
+                            return;
+                        }
+                        data.results.forEach(med => {
+                            const div = document.createElement('div');
+                            div.className = 'med-result-item';
+                            const meta = [med.strength, med.dosage_form].filter(Boolean).join(' &middot; ');
+                            div.innerHTML = `<span class="med-name">${med.name}</span><span class="med-meta">${meta ? meta + ' &middot; ' : ''}Stock: ${med.current_stock}</span>`;
+                            div.addEventListener('click', () => {
+                                medInput.value = med.name;
+                                medResults.style.display = 'none';
+                            });
+                            medResults.appendChild(div);
                         });
-                        resultsBox.appendChild(div);
+                        medResults.style.display = 'block';
                     });
-                    resultsBox.style.display = 'block';
-                });
-        }, 250);
+            }, 250);
+        });
+        medInput.addEventListener('blur', () => setTimeout(() => { medResults.style.display = 'none'; }, 200));
+        medInput.addEventListener('focus', () => { if (medResults.children.length > 0) medResults.style.display = 'block'; });
+    }
+
+    // ── Diagnosis Autocomplete ──
+    function setupDiagAutocomplete(inputId, resultsId) {
+        const input = document.getElementById(inputId);
+        const results = document.getElementById(resultsId);
+        if (!input || !results) return;
+
+        let timer;
+        input.addEventListener('input', function() {
+            clearTimeout(timer);
+            const q = this.value.trim();
+            if (q.length < 2) { results.style.display = 'none'; return; }
+            timer = setTimeout(() => {
+                fetch(`/discharge/api/diagnosis-suggestions/?q=${encodeURIComponent(q)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        results.innerHTML = '';
+                        if (!data.results || data.results.length === 0) {
+                            results.style.display = 'none';
+                            return;
+                        }
+                        data.results.forEach(d => {
+                            const div = document.createElement('div');
+                            div.className = 'diag-result-item';
+                            div.innerHTML = `<span class="diag-name">${d}</span>`;
+                            div.addEventListener('click', () => {
+                                // Append to existing text instead of replacing
+                                const current = input.value.trim();
+                                if (current) {
+                                    input.value = current + '\n' + d;
+                                } else {
+                                    input.value = d;
+                                }
+                                results.style.display = 'none';
+                                input.focus();
+                            });
+                            results.appendChild(div);
+                        });
+                        results.style.display = 'block';
+                    });
+            }, 250);
+        });
+        input.addEventListener('blur', () => setTimeout(() => { results.style.display = 'none'; }, 200));
+        input.addEventListener('focus', () => { if (results.children.length > 0) results.style.display = 'block'; });
+    }
+
+    setupDiagAutocomplete('id_primary_diagnosis', 'primary-diag-results');
+    setupDiagAutocomplete('id_secondary_diagnosis', 'secondary-diag-results');
+
+    // ── HTMX afterRequest: clear med form on success ──
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.elt && evt.detail.elt.id === 'med-add-form') {
+            if (evt.detail.xhr.status === 200) {
+                // Clear medication form fields
+                evt.detail.elt.reset();
+                // Show brief save feedback
+                const status = document.getElementById('save-status');
+                if (status) {
+                    status.textContent = 'Medication added';
+                    status.className = 'saved';
+                    setTimeout(() => { status.textContent = ''; status.className = ''; }, 2000);
+                }
+            }
+        }
     });
 
-    input.addEventListener('blur', () => {
-        setTimeout(() => { resultsBox.style.display = 'none'; }, 200);
+    // ── HTMX save status feedback ──
+    document.body.addEventListener('htmx:beforeRequest', function(evt) {
+        if (evt.detail.elt && evt.detail.elt.id === 'dischargeForm') {
+            const status = document.getElementById('save-status');
+            if (status) { status.textContent = 'Saving...'; status.className = 'saving'; }
+        }
     });
-    input.addEventListener('focus', () => {
-        if (resultsBox.children.length > 0) resultsBox.style.display = 'block';
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.elt && evt.detail.elt.id === 'dischargeForm') {
+            const status = document.getElementById('save-status');
+            if (status) { status.textContent = 'Saved'; status.className = 'saved'; setTimeout(() => { status.textContent = ''; status.className = ''; }, 2000); }
+        }
     });
+
+    // ── Auto-save every 30 seconds ──
+    let autoSaveTimer;
+    const form = document.getElementById('dischargeForm');
+    if (form && form.hasAttribute('hx-post')) {
+        autoSaveTimer = setInterval(() => {
+            form.dispatchEvent(new Event('submit'));
+        }, 30000);
+    }
 })();
 </script>
 {% endblock %}

@@ -39,6 +39,17 @@ class DischargeSummaryCreateView(LoginRequiredMixin, View):
                 admission_id=admission_id, user=request.user,
             )
 
+        # Auto-populate diagnosis from consultation if fields are empty
+        if not summary.primary_diagnosis and admission.visit:
+            from consultation.models import Consultation
+            consultations = Consultation.objects.filter(
+                visit=admission.visit
+            ).order_by("-started_at")
+            diagnoses = [c.diagnosis.strip() for c in consultations if c.diagnosis.strip()]
+            if diagnoses:
+                summary.primary_diagnosis = "\n".join(diagnoses)
+                summary.save(update_fields=["primary_diagnosis", "updated_at"])
+
         form = DischargeSummaryForm(instance=summary)
         med_form = DischargeMedicationForm()
         sig_form = DoctorSignatureForm()
@@ -69,6 +80,8 @@ class DischargeSummarySaveView(LoginRequiredMixin, View):
 
         if summary.status == DischargeSummary.Status.FINALIZED:
             messages.warning(request, "Cannot edit a finalized discharge summary.")
+            if request.headers.get("HX-Request"):
+                return HttpResponse("")
             return redirect("discharge:discharge-summary-detail", summary_id=summary.pk)
 
         data = request.POST.copy()
@@ -76,6 +89,10 @@ class DischargeSummarySaveView(LoginRequiredMixin, View):
             data["doctor_signature"] = request.FILES["doctor_signature"]
 
         summary = services.save_draft(summary_id, data, user=request.user)
+
+        if request.headers.get("HX-Request"):
+            return HttpResponse("Saved")
+
         messages.success(request, "Discharge summary saved successfully.")
         return redirect("discharge:discharge-summary-detail", summary_id=summary.pk)
 
@@ -163,14 +180,21 @@ class DischargeMedicationAddView(LoginRequiredMixin, View):
 
         if summary.status == DischargeSummary.Status.FINALIZED:
             messages.warning(request, "Cannot edit a finalized discharge summary.")
+            if request.headers.get("HX-Request"):
+                return HttpResponse("")
             return redirect("discharge:discharge-summary-detail", summary_id=summary.pk)
 
         form = DischargeMedicationForm(request.POST)
         if form.is_valid():
             services.add_discharge_medication(summary_id, form.cleaned_data)
-            messages.success(request, "Medication added.")
         else:
             messages.error(request, "Invalid medication data.")
+
+        if request.headers.get("HX-Request"):
+            summary.refresh_from_db()
+            return render(request, "discharge/_medications_table.html", {
+                "summary": summary,
+            })
 
         return redirect("discharge:discharge-summary-detail", summary_id=summary.pk)
 
@@ -180,14 +204,23 @@ class DischargeMedicationRemoveView(LoginRequiredMixin, View):
 
     def post(self, request, med_id):
         med = get_object_or_404(DischargeMedication, pk=med_id)
-        summary_id = med.discharge_summary.pk
+        summary = med.discharge_summary
+        summary_id = summary.pk
 
-        if med.discharge_summary.status == DischargeSummary.Status.FINALIZED:
+        if summary.status == DischargeSummary.Status.FINALIZED:
             messages.warning(request, "Cannot edit a finalized discharge summary.")
+            if request.headers.get("HX-Request"):
+                return HttpResponse("")
             return redirect("discharge:discharge-summary-detail", summary_id=summary_id)
 
         services.remove_discharge_medication(med_id)
-        messages.success(request, "Medication removed.")
+
+        if request.headers.get("HX-Request"):
+            summary.refresh_from_db()
+            return render(request, "discharge/_medications_table.html", {
+                "summary": summary,
+            })
+
         return redirect("discharge:discharge-summary-detail", summary_id=summary_id)
 
 
@@ -285,3 +318,47 @@ class AdmissionForDischargeListView(LoginRequiredMixin, View):
         return render(request, "discharge/admission_list.html", {
             "patient_data": patient_data,
         })
+
+
+class DiagnosisSuggestionsAPIView(LoginRequiredMixin, View):
+    """Return diagnosis suggestions from consultation history and common diagnoses."""
+
+    COMMON_DIAGNOSES = [
+        "Malaria", "Pneumonia", "Typhoid", "Diabetes Mellitus",
+        "Hypertension", "Urinary Tract Infection", "Gastroenteritis",
+        "Anemia", "HIV/AIDS", "Tuberculosis", "Asthma",
+        "Chronic Obstructive Pulmonary Disease", "Heart Failure",
+        "Cerebrovascular Accident", "Peptic Ulcer Disease",
+        "Acute Appendicitis", "Acute Gastritis", "Pneumothorax",
+        "Cellulitis", "Abscess", "Fracture", "Wound Infection",
+        "Meningitis", "Hepatitis", "Renal Failure",
+        "Sepsis", "Dehydration", "Malnutrition",
+    ]
+
+    def get(self, request):
+        q = request.GET.get("q", "").strip()
+        if len(q) < 2:
+            return JsonResponse({"results": []})
+
+        # Get diagnoses from past consultations
+        from consultation.models import Consultation
+        past_diagnoses = (
+            Consultation.objects
+            .filter(diagnosis__icontains=q)
+            .values_list("diagnosis", flat=True)
+            .distinct()[:10]
+        )
+
+        # Filter common diagnoses
+        common = [d for d in self.COMMON_DIAGNOSES if q.lower() in d.lower()]
+
+        # Merge and deduplicate
+        seen = set()
+        results = []
+        for d in list(past_diagnoses) + common:
+            d = d.strip()
+            if d and d.lower() not in seen:
+                seen.add(d.lower())
+                results.append(d)
+
+        return JsonResponse({"results": results[:15]})
