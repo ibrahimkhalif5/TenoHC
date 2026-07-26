@@ -35,12 +35,18 @@ def auto_populate_summary(summary):
     """
     Auto-populate discharge summary fields from all available clinical data.
     Only fills fields that are currently empty — never overwrites doctor input.
+    Pulls from: triage, consultations, prescriptions, nursing, admission,
+    lab requests (clinical indication), radiology, and visit events.
     """
     admission = summary.admission
     visit = admission.visit
     update_fields = []
 
-    # ── Gather data from all sources ──
+    def _dirty(field):
+        """Check if a text field is empty/blank."""
+        return not getattr(summary, field, "").strip()
+
+    # ── Gather data from ALL sources ──
     triage = None
     if visit:
         triage = (
@@ -77,21 +83,65 @@ def auto_populate_summary(summary):
         Treatment.objects.filter(admission=admission).order_by("-created_at")
     )
 
+    # Lab requests with clinical indication
+    lab_requests = []
+    if visit:
+        from laboratory.models import LabRequest
+        lab_requests = list(
+            LabRequest.objects
+            .filter(visit=visit)
+            .select_related("lab_test")
+        )
+
+    # Radiology requests with clinical indication
+    radiology_requests = []
+    if visit:
+        from radiology.models import RadiologyRequest
+        radiology_requests = list(
+            RadiologyRequest.objects
+            .filter(visit=visit)
+            .select_related("radiology_service")
+        )
+
+    # Visit events (audit trail)
+    visit_events = []
+    if visit:
+        from triage.models import VisitEvent
+        visit_events = list(
+            VisitEvent.objects
+            .filter(visit=visit)
+            .select_related("created_by")
+            .order_by("timestamp")
+        )
+
     # ── 1. Primary Diagnosis ──
-    if not summary.primary_diagnosis.strip():
+    if _dirty("primary_diagnosis"):
         diagnoses = []
+        # Admission diagnosis
         if admission.diagnosis and admission.diagnosis.strip():
             diagnoses.append(admission.diagnosis.strip())
+        # Consultation diagnoses
         for c in consultations:
             if c.diagnosis and c.diagnosis.strip():
                 diagnoses.append(c.diagnosis.strip())
+        # Lab clinical indications (doctor's suspected diagnosis when ordering tests)
+        for lr in lab_requests:
+            if lr.clinical_indication and lr.clinical_indication.strip():
+                text = lr.clinical_indication.strip()
+                if text.lower() not in [d.lower() for d in diagnoses]:
+                    diagnoses.append(f"Lab Indication: {text}")
+        # Radiology clinical indications
+        for rr in radiology_requests:
+            if hasattr(rr, 'clinical_indication') and rr.clinical_indication and rr.clinical_indication.strip():
+                text = rr.clinical_indication.strip()
+                if text.lower() not in [d.lower() for d in diagnoses]:
+                    diagnoses.append(f"Imaging Indication: {text}")
         if diagnoses:
             summary.primary_diagnosis = "\n".join(dict.fromkeys(diagnoses))
             update_fields.append("primary_diagnosis")
 
     # ── 2. Secondary Diagnosis ──
-    if not summary.secondary_diagnosis.strip() and consultations:
-        # If multiple consultations with different diagnoses, secondary = rest
+    if _dirty("secondary_diagnosis"):
         all_dx = []
         if admission.diagnosis and admission.diagnosis.strip():
             all_dx.append(admission.diagnosis.strip())
@@ -104,39 +154,52 @@ def auto_populate_summary(summary):
             update_fields.append("secondary_diagnosis")
 
     # ── 3. Reason for Admission ──
-    if not summary.reason_for_admission.strip():
+    if _dirty("reason_for_admission"):
         reasons = []
         if triage and triage.chief_complaint and triage.chief_complaint.strip():
-            reasons.append(triage.chief_complaint.strip())
+            reasons.append(f"Presenting Complaint: {triage.chief_complaint.strip()}")
         if admission.diagnosis and admission.diagnosis.strip():
-            reasons.append(f"Diagnosed with: {admission.diagnosis.strip()}")
+            reasons.append(f"Diagnosis: {admission.diagnosis.strip()}")
+        if admission.notes and admission.notes.strip():
+            reasons.append(f"Admission Notes: {admission.notes.strip()}")
+        # Lab clinical indications
+        indications = []
+        for lr in lab_requests:
+            if lr.clinical_indication and lr.clinical_indication.strip():
+                indications.append(lr.clinical_indication.strip())
+        if indications:
+            reasons.append(f"Clinical Indications: {'; '.join(dict.fromkeys(indications))}")
         if reasons:
             summary.reason_for_admission = "\n".join(reasons)
             update_fields.append("reason_for_admission")
 
     # ── 4. History of Present Illness ──
-    if not summary.history_of_present_illness.strip():
+    if _dirty("history_of_present_illness"):
         hpi_parts = []
         if triage:
             if triage.chief_complaint and triage.chief_complaint.strip():
                 hpi_parts.append(f"Chief Complaint: {triage.chief_complaint.strip()}")
             if triage.nurse_notes and triage.nurse_notes.strip():
-                hpi_parts.append(f"Triage Notes: {triage.nurse_notes.strip()}")
+                hpi_parts.append(f"Triage Assessment: {triage.nurse_notes.strip()}")
+        # All consultation notes (most recent first)
         for c in consultations:
             if c.notes and c.notes.strip():
-                hpi_parts.append(f"Consultation Notes: {c.notes.strip()}")
-                break  # Only the most recent consultation notes
+                doctor_name = c.doctor.get_full_name() if c.doctor else "Doctor"
+                hpi_parts.append(f"Consultation ({doctor_name}): {c.notes.strip()}")
+        # Admission notes
+        if admission.notes and admission.notes.strip():
+            hpi_parts.append(f"Admission Notes: {admission.notes.strip()}")
         if hpi_parts:
             summary.history_of_present_illness = "\n\n".join(hpi_parts)
             update_fields.append("history_of_present_illness")
 
-    # ── 5. Clinical Findings (vitals + exam) ──
-    if not summary.clinical_findings.strip():
+    # ── 5. Clinical Findings (vitals + exam + lab indications) ──
+    if _dirty("clinical_findings"):
         findings = []
         # Triage vitals
         if triage:
             vitals_text = (
-                f"Temperature: {triage.temperature}°C | "
+                f"Temperature: {triage.temperature}\u00b0C | "
                 f"BP: {triage.blood_pressure_systolic}/{triage.blood_pressure_diastolic} mmHg | "
                 f"Pulse: {triage.pulse} bpm | "
                 f"RR: {triage.respiratory_rate}/min | "
@@ -144,37 +207,44 @@ def auto_populate_summary(summary):
                 f"Weight: {triage.weight} kg"
             )
             findings.append(f"Initial Vitals: {vitals_text}")
+            # BMI if height/weight available
+            if triage.height and triage.weight:
+                height_m = float(triage.height) / 100
+                if height_m > 0:
+                    bmi = float(triage.weight) / (height_m ** 2)
+                    findings.append(f"BMI: {bmi:.1f} kg/m\u00b2")
         # Latest daily vitals
         if daily_vitals:
             latest = daily_vitals[0]
             findings.append(
                 f"Latest Vitals ({latest.record_date}): "
-                f"Temp {latest.temperature}°C, "
+                f"Temp {latest.temperature}\u00b0C, "
                 f"BP {latest.blood_pressure_systolic}/{latest.blood_pressure_diastolic}, "
                 f"Pulse {latest.pulse}, SpO2 {latest.oxygen_saturation}%"
             )
-        # Consultation clinical findings (from notes)
+        # Consultation clinical findings
         for c in consultations:
             if c.notes and c.notes.strip():
-                findings.append(f"Clinical Notes: {c.notes.strip()}")
+                findings.append(f"Clinical Examination: {c.notes.strip()}")
                 break
         if findings:
             summary.clinical_findings = "\n".join(findings)
             update_fields.append("clinical_findings")
 
     # ── 6. Treatment Given ──
-    if not summary.treatment_given.strip():
+    if _dirty("treatment_given"):
         tx_parts = []
         # Consultation treatment plans
         for c in consultations:
             if c.treatment_plan and c.treatment_plan.strip():
-                tx_parts.append(f"Doctor's Plan: {c.treatment_plan.strip()}")
+                doctor_name = c.doctor.get_full_name() if c.doctor else "Doctor"
+                tx_parts.append(f"Doctor's Plan ({doctor_name}): {c.treatment_plan.strip()}")
                 break
         # Prescriptions
         if prescriptions:
             med_lines = []
             for p in prescriptions:
-                line = f"{p.medicine.name} {p.dosage} {p.frequency} for {p.duration_days} days"
+                line = f"\u2022 {p.medicine.name} {p.dosage} {p.frequency} for {p.duration_days} days"
                 if p.instructions:
                     line += f" ({p.instructions})"
                 med_lines.append(line)
@@ -183,9 +253,11 @@ def auto_populate_summary(summary):
         if treatments:
             tx_lines = []
             for t in treatments:
-                line = f"- {t.treatment}"
+                line = f"\u2022 {t.treatment}"
                 if t.medication:
                     line += f" ({t.medication} {t.dosage})"
+                if t.notes:
+                    line += f" - {t.notes}"
                 tx_lines.append(line)
             tx_parts.append("In-patient Treatments:\n" + "\n".join(tx_lines))
         if tx_parts:
@@ -193,20 +265,24 @@ def auto_populate_summary(summary):
             update_fields.append("treatment_given")
 
     # ── 7. Procedures Done ──
-    if not summary.procedures_done.strip():
+    if _dirty("procedures_done"):
         proc_lines = []
         for t in treatments:
-            if t.treatment and "procedure" in t.treatment.lower() or "surgery" in t.treatment.lower():
-                proc_lines.append(f"- {t.treatment}")
+            desc = t.treatment.lower() if t.treatment else ""
+            if any(kw in desc for kw in ["procedure", "surgery", "operation", "incision", "drainage", "sutur", "biopsy"]):
+                line = f"\u2022 {t.treatment}"
+                if t.notes:
+                    line += f" ({t.notes})"
+                proc_lines.append(line)
         if proc_lines:
             summary.procedures_done = "\n".join(proc_lines)
             update_fields.append("procedures_done")
 
     # ── 8. Patient Progress ──
-    if not summary.patient_progress.strip():
+    if _dirty("patient_progress"):
         progress_parts = []
         if nursing_notes:
-            for note in nursing_notes[:5]:  # Last 5 nursing notes
+            for note in nursing_notes[:5]:
                 progress_parts.append(
                     f"[{note.created_at.strftime('%d %b %Y %H:%M')}] {note.note}"
                 )
@@ -214,14 +290,23 @@ def auto_populate_summary(summary):
             progress_parts.append(
                 f"Vitals monitored daily over {len(daily_vitals)} day(s). "
                 f"Latest: BP {daily_vitals[0].blood_pressure_systolic}/{daily_vitals[0].blood_pressure_diastolic}, "
-                f"Temp {daily_vitals[0].temperature}°C"
+                f"Temp {daily_vitals[0].temperature}\u00b0C"
             )
+        if visit_events:
+            event_descriptions = []
+            for ev in visit_events:
+                if ev.description and ev.description.strip():
+                    event_descriptions.append(ev.description.strip())
+            if event_descriptions:
+                progress_parts.append("Visit Timeline:\n" + "\n".join(
+                    f"\u2022 {d}" for d in event_descriptions
+                ))
         if progress_parts:
             summary.patient_progress = "\n\n".join(progress_parts)
             update_fields.append("patient_progress")
 
     # ── 9. Condition on Discharge (sensible default) ──
-    if not summary.condition_on_discharge.strip():
+    if _dirty("condition_on_discharge"):
         summary.condition_on_discharge = "Stable"
         update_fields.append("condition_on_discharge")
 

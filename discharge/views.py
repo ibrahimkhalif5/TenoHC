@@ -108,6 +108,11 @@ class DischargeSummaryDetailView(LoginRequiredMixin, View):
         )
 
         admission = summary.admission
+
+        # Auto-populate empty fields on draft summaries
+        if summary.status != DischargeSummary.Status.FINALIZED:
+            services.auto_populate_summary(summary)
+
         form = DischargeSummaryForm(instance=summary)
         med_form = DischargeMedicationForm()
         sig_form = DoctorSignatureForm()
