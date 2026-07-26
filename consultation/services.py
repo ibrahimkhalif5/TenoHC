@@ -74,11 +74,22 @@ def start_consultation(visit_id, user=None):
 
         was_review = visit.status == Visit.Status.WAITING_DOCTOR_REVIEW
 
-        consultation = Consultation.objects.create(
-            visit=visit,
-            doctor=user,
-            status=Consultation.Status.IN_PROGRESS,
-        )
+        if was_review:
+            consultation = Consultation.objects.filter(
+                visit=visit, status=Consultation.Status.IN_PROGRESS,
+            ).order_by("-started_at").first()
+            if not consultation:
+                consultation = Consultation.objects.create(
+                    visit=visit,
+                    doctor=user,
+                    status=Consultation.Status.IN_PROGRESS,
+                )
+        else:
+            consultation = Consultation.objects.create(
+                visit=visit,
+                doctor=user,
+                status=Consultation.Status.IN_PROGRESS,
+            )
 
         visit.status = Visit.Status.IN_CONSULTATION
         visit.save(update_fields=["status", "updated_at"])
