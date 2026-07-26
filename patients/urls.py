@@ -8,5 +8,6 @@ urlpatterns = [
     path("register/", views.PatientRegisterView.as_view(), name="patient-register"),
     path("search/", views.PatientSearchAPIView.as_view(), name="patient-search-api"),
     path("<int:pk>/", views.PatientDetailView.as_view(), name="patient-detail"),
+    path("<int:pk>/edit/", views.PatientUpdateView.as_view(), name="patient-edit"),
     path("<int:pk>/visit/", views.PatientCreateVisitView.as_view(), name="patient-create-visit"),
 ]

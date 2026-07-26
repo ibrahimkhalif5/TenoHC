@@ -15,6 +15,9 @@
         <a href="{% url 'patients:patient-list' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left"></i> Back to List
         </a>
+        <a href="{% url 'patients:patient-edit' pk=patient.pk %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
         <form method="post" action="{% url 'patients:patient-create-visit' pk=patient.pk %}" class="d-inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-success btn-sm">

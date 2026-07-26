@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Patient - {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">
+            <i class="bi bi-pencil"></i> Edit Patient: {{ patient.full_name }}
+            <span class="badge bg-primary ms-2">{{ patient.patient_number }}</span>
+        </h4>
+    </div>
+    <a href="{% url 'patients:patient-detail' pk=patient.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Profile
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Save Changes
+                </button>
+                <a href="{% url 'patients:patient-detail' pk=patient.pk %}" class="btn btn-secondary ms-2">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

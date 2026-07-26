@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 
 from .models import Patient
-from .forms import PatientRegistrationForm, PatientSearchForm
+from .forms import PatientRegistrationForm, PatientSearchForm, PatientUpdateForm
 from . import services
 
 
@@ -165,3 +165,27 @@ class PatientCreateVisitView(LoginRequiredMixin, View):
             f"New visit {visit.visit_number} created for {patient.full_name}. Patient is now in triage queue.",
         )
         return redirect("triage:triage-list")
+
+
+class PatientUpdateView(LoginRequiredMixin, View):
+    """Edit an existing patient's details."""
+
+    def get(self, request, pk):
+        patient = get_object_or_404(Patient, pk=pk)
+        form = PatientUpdateForm(instance=patient)
+        return render(request, "patients/patient_edit.html", {
+            "form": form,
+            "patient": patient,
+        })
+
+    def post(self, request, pk):
+        patient = get_object_or_404(Patient, pk=pk)
+        form = PatientUpdateForm(request.POST, request.FILES, instance=patient)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Patient {patient.full_name} updated successfully.")
+            return redirect("patients:patient-detail", pk=patient.pk)
+        return render(request, "patients/patient_edit.html", {
+            "form": form,
+            "patient": patient,
+        })
