@@ -253,6 +253,7 @@ class LabReportPDFGenerator(DocumentTemplateService):
                 break
 
         requested_date = "—"
+        first_req = self.lab_requests.first()
         if first_req and first_req.created_at:
             requested_date = first_req.created_at.strftime("%d %b %Y %H:%M")
 
