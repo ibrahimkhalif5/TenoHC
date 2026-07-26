@@ -15,7 +15,7 @@ PROJECT_DIR="TenoHMS"
 PA_USER=$(whoami)
 
 echo ""
-echo "[1/7] Cloning repository..."
+echo "[1/8] Cloning repository..."
 if [ -d "$PROJECT_DIR" ]; then
     echo "  Directory already exists, pulling latest..."
     cd "$PROJECT_DIR"
@@ -26,19 +26,19 @@ else
 fi
 
 echo ""
-echo "[2/7] Creating virtual environment..."
+echo "[2/8] Creating virtual environment..."
 if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
 source venv/bin/activate
 
 echo ""
-echo "[3/7] Installing dependencies..."
+echo "[3/8] Installing dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
 echo ""
-echo "[4/7] Setting up .env file..."
+echo "[4/8] Setting up .env file..."
 if [ ! -f ".env" ]; then
     SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
 
@@ -65,15 +65,20 @@ else
 fi
 
 echo ""
-echo "[5/7] Collecting static files..."
+echo "[5/8] Collecting static files..."
 python manage.py collectstatic --noinput
 
 echo ""
-echo "[6/7] Running migrations..."
+echo "[6/8] Running migrations..."
 python manage.py migrate
 
 echo ""
-echo "[7/7] Creating superuser..."
+echo "[7/8] Loading seed data..."
+python manage.py load_seed_csv
+python manage.py seed_item_master
+
+echo ""
+echo "[8/8] Creating superuser..."
 echo "  You will be prompted to create an admin account:"
 python manage.py createsuperuser
 

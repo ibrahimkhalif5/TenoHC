@@ -1,5 +1,7 @@
 import os
 
+from django.core.exceptions import ImproperlyConfigured
+
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
@@ -9,7 +11,7 @@ DEBUG = False
 # ---------------------------------------------------------------------------
 _secret = os.environ.get("DJANGO_SECRET_KEY")
 if not _secret or _secret.startswith("django-insecure"):
-    raise ImproperlyConfigured("Set DJANGO_SECRET_KEY environment variable.")  # noqa: F405
+    raise ImproperlyConfigured("Set DJANGO_SECRET_KEY environment variable.")
 SECRET_KEY = _secret
 
 # ---------------------------------------------------------------------------
