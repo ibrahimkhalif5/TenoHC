@@ -31,6 +31,208 @@ def create_discharge_summary(admission_id, user=None):
         return summary
 
 
+def auto_populate_summary(summary):
+    """
+    Auto-populate discharge summary fields from all available clinical data.
+    Only fills fields that are currently empty — never overwrites doctor input.
+    """
+    admission = summary.admission
+    visit = admission.visit
+    update_fields = []
+
+    # ── Gather data from all sources ──
+    triage = None
+    if visit:
+        triage = (
+            visit.triage_assessments
+            .order_by("-assessed_at")
+            .first()
+        )
+
+    consultations = []
+    if visit:
+        consultations = list(
+            visit.consultations
+            .select_related("doctor")
+            .order_by("-started_at")
+        )
+
+    prescriptions = []
+    if visit:
+        from consultation.models import Prescription
+        prescriptions = list(
+            Prescription.objects
+            .filter(consultation__visit=visit)
+            .select_related("medicine")
+        )
+
+    from nursing.models import NursingNote, DailyVitals, Treatment
+    nursing_notes = list(
+        NursingNote.objects.filter(admission=admission).order_by("-created_at")
+    )
+    daily_vitals = list(
+        DailyVitals.objects.filter(admission=admission).order_by("-record_date")
+    )
+    treatments = list(
+        Treatment.objects.filter(admission=admission).order_by("-created_at")
+    )
+
+    # ── 1. Primary Diagnosis ──
+    if not summary.primary_diagnosis.strip():
+        diagnoses = []
+        if admission.diagnosis and admission.diagnosis.strip():
+            diagnoses.append(admission.diagnosis.strip())
+        for c in consultations:
+            if c.diagnosis and c.diagnosis.strip():
+                diagnoses.append(c.diagnosis.strip())
+        if diagnoses:
+            summary.primary_diagnosis = "\n".join(dict.fromkeys(diagnoses))
+            update_fields.append("primary_diagnosis")
+
+    # ── 2. Secondary Diagnosis ──
+    if not summary.secondary_diagnosis.strip() and consultations:
+        # If multiple consultations with different diagnoses, secondary = rest
+        all_dx = []
+        if admission.diagnosis and admission.diagnosis.strip():
+            all_dx.append(admission.diagnosis.strip())
+        for c in consultations:
+            if c.diagnosis and c.diagnosis.strip():
+                all_dx.append(c.diagnosis.strip())
+        unique_dx = list(dict.fromkeys(all_dx))
+        if len(unique_dx) > 1:
+            summary.secondary_diagnosis = "\n".join(unique_dx[1:])
+            update_fields.append("secondary_diagnosis")
+
+    # ── 3. Reason for Admission ──
+    if not summary.reason_for_admission.strip():
+        reasons = []
+        if triage and triage.chief_complaint and triage.chief_complaint.strip():
+            reasons.append(triage.chief_complaint.strip())
+        if admission.diagnosis and admission.diagnosis.strip():
+            reasons.append(f"Diagnosed with: {admission.diagnosis.strip()}")
+        if reasons:
+            summary.reason_for_admission = "\n".join(reasons)
+            update_fields.append("reason_for_admission")
+
+    # ── 4. History of Present Illness ──
+    if not summary.history_of_present_illness.strip():
+        hpi_parts = []
+        if triage:
+            if triage.chief_complaint and triage.chief_complaint.strip():
+                hpi_parts.append(f"Chief Complaint: {triage.chief_complaint.strip()}")
+            if triage.nurse_notes and triage.nurse_notes.strip():
+                hpi_parts.append(f"Triage Notes: {triage.nurse_notes.strip()}")
+        for c in consultations:
+            if c.notes and c.notes.strip():
+                hpi_parts.append(f"Consultation Notes: {c.notes.strip()}")
+                break  # Only the most recent consultation notes
+        if hpi_parts:
+            summary.history_of_present_illness = "\n\n".join(hpi_parts)
+            update_fields.append("history_of_present_illness")
+
+    # ── 5. Clinical Findings (vitals + exam) ──
+    if not summary.clinical_findings.strip():
+        findings = []
+        # Triage vitals
+        if triage:
+            vitals_text = (
+                f"Temperature: {triage.temperature}°C | "
+                f"BP: {triage.blood_pressure_systolic}/{triage.blood_pressure_diastolic} mmHg | "
+                f"Pulse: {triage.pulse} bpm | "
+                f"RR: {triage.respiratory_rate}/min | "
+                f"SpO2: {triage.oxygen_saturation}% | "
+                f"Weight: {triage.weight} kg"
+            )
+            findings.append(f"Initial Vitals: {vitals_text}")
+        # Latest daily vitals
+        if daily_vitals:
+            latest = daily_vitals[0]
+            findings.append(
+                f"Latest Vitals ({latest.record_date}): "
+                f"Temp {latest.temperature}°C, "
+                f"BP {latest.blood_pressure_systolic}/{latest.blood_pressure_diastolic}, "
+                f"Pulse {latest.pulse}, SpO2 {latest.oxygen_saturation}%"
+            )
+        # Consultation clinical findings (from notes)
+        for c in consultations:
+            if c.notes and c.notes.strip():
+                findings.append(f"Clinical Notes: {c.notes.strip()}")
+                break
+        if findings:
+            summary.clinical_findings = "\n".join(findings)
+            update_fields.append("clinical_findings")
+
+    # ── 6. Treatment Given ──
+    if not summary.treatment_given.strip():
+        tx_parts = []
+        # Consultation treatment plans
+        for c in consultations:
+            if c.treatment_plan and c.treatment_plan.strip():
+                tx_parts.append(f"Doctor's Plan: {c.treatment_plan.strip()}")
+                break
+        # Prescriptions
+        if prescriptions:
+            med_lines = []
+            for p in prescriptions:
+                line = f"{p.medicine.name} {p.dosage} {p.frequency} for {p.duration_days} days"
+                if p.instructions:
+                    line += f" ({p.instructions})"
+                med_lines.append(line)
+            tx_parts.append("Prescriptions:\n" + "\n".join(med_lines))
+        # Nursing treatments during admission
+        if treatments:
+            tx_lines = []
+            for t in treatments:
+                line = f"- {t.treatment}"
+                if t.medication:
+                    line += f" ({t.medication} {t.dosage})"
+                tx_lines.append(line)
+            tx_parts.append("In-patient Treatments:\n" + "\n".join(tx_lines))
+        if tx_parts:
+            summary.treatment_given = "\n\n".join(tx_parts)
+            update_fields.append("treatment_given")
+
+    # ── 7. Procedures Done ──
+    if not summary.procedures_done.strip():
+        proc_lines = []
+        for t in treatments:
+            if t.treatment and "procedure" in t.treatment.lower() or "surgery" in t.treatment.lower():
+                proc_lines.append(f"- {t.treatment}")
+        if proc_lines:
+            summary.procedures_done = "\n".join(proc_lines)
+            update_fields.append("procedures_done")
+
+    # ── 8. Patient Progress ──
+    if not summary.patient_progress.strip():
+        progress_parts = []
+        if nursing_notes:
+            for note in nursing_notes[:5]:  # Last 5 nursing notes
+                progress_parts.append(
+                    f"[{note.created_at.strftime('%d %b %Y %H:%M')}] {note.note}"
+                )
+        if daily_vitals and len(daily_vitals) > 1:
+            progress_parts.append(
+                f"Vitals monitored daily over {len(daily_vitals)} day(s). "
+                f"Latest: BP {daily_vitals[0].blood_pressure_systolic}/{daily_vitals[0].blood_pressure_diastolic}, "
+                f"Temp {daily_vitals[0].temperature}°C"
+            )
+        if progress_parts:
+            summary.patient_progress = "\n\n".join(progress_parts)
+            update_fields.append("patient_progress")
+
+    # ── 9. Condition on Discharge (sensible default) ──
+    if not summary.condition_on_discharge.strip():
+        summary.condition_on_discharge = "Stable"
+        update_fields.append("condition_on_discharge")
+
+    # ── Save all at once ──
+    if update_fields:
+        update_fields.append("updated_at")
+        summary.save(update_fields=update_fields)
+
+    return summary
+
+
 def save_draft(summary_id, data, user=None):
     """Save discharge summary draft fields."""
     with transaction.atomic():
