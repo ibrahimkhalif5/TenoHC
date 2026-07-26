@@ -1,8 +1,18 @@
 import os
+from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
+# Load .env from project root (BASE_DIR is three levels up from this file)
 from .base import *  # noqa: F401,F403
+
+_env_path = BASE_DIR / ".env"  # noqa: F405
+if _env_path.is_file():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_env_path)
+    except ImportError:
+        pass
 
 DEBUG = False
 
