@@ -39,15 +39,31 @@ class DischargeSummaryCreateView(LoginRequiredMixin, View):
                 admission_id=admission_id, user=request.user,
             )
 
-        # Auto-populate diagnosis from consultation if fields are empty
-        if not summary.primary_diagnosis and admission.visit:
-            from consultation.models import Consultation
-            consultations = Consultation.objects.filter(
-                visit=admission.visit
-            ).order_by("-started_at")
-            diagnoses = [c.diagnosis.strip() for c in consultations if c.diagnosis.strip()]
+        # Auto-populate diagnosis from multiple sources if field is empty
+        if not summary.primary_diagnosis.strip():
+            diagnoses = []
+
+            # Source 1: Admission diagnosis
+            if admission.diagnosis and admission.diagnosis.strip():
+                diagnoses.append(admission.diagnosis.strip())
+
+            # Source 2: Consultation diagnoses
+            if admission.visit:
+                from consultation.models import Consultation
+                consultations = Consultation.objects.filter(
+                    visit=admission.visit
+                ).order_by("-started_at")
+                for c in consultations:
+                    if c.diagnosis and c.diagnosis.strip():
+                        diagnoses.append(c.diagnosis.strip())
+
+            # Source 3: Triage visit chief complaint / presenting complaint
+            if admission.visit and hasattr(admission.visit, 'chief_complaint'):
+                if admission.visit.chief_complaint and admission.visit.chief_complaint.strip():
+                    diagnoses.append("Presenting Complaint: " + admission.visit.chief_complaint.strip())
+
             if diagnoses:
-                summary.primary_diagnosis = "\n".join(diagnoses)
+                summary.primary_diagnosis = "\n".join(dict.fromkeys(diagnoses))
                 summary.save(update_fields=["primary_diagnosis", "updated_at"])
 
         form = DischargeSummaryForm(instance=summary)
