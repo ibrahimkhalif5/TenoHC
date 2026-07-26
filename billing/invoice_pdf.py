@@ -9,6 +9,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
 from core.document_service import DocumentTemplateService
+from core.constants import CASHIER_NAME, DOCTOR_NAME
 
 
 class InvoicePDFGenerator(DocumentTemplateService):
@@ -53,8 +54,7 @@ class InvoicePDFGenerator(DocumentTemplateService):
             self.build_kv_row("Visit Number", data["invoice"].visit.visit_number),
             self.build_kv_row("Invoice Date",
                 data["invoice"].created_at.strftime("%d %b %Y %H:%M") if data["invoice"].created_at else "—"),
-            self.build_kv_row("Cashier",
-                data["invoice"].created_by.get_full_name() if data["invoice"].created_by else "System"),
+            self.build_kv_row("Cashier", CASHIER_NAME),
             self.build_kv_row("Payment Status", data["invoice"].get_status_display()),
         ]
         pat_rows = [
@@ -91,7 +91,7 @@ class InvoicePDFGenerator(DocumentTemplateService):
             self.build_kv_row("Consultation Date",
                 data["consultation"].created_at.strftime("%d %b %Y") if data["consultation"] else "—"),
             self.build_kv_row("Visit Type", data["visit_type"]),
-            self.build_kv_row("Attending Doctor", data["doctor_name"] or "—"),
+            self.build_kv_row("Attending Doctor", DOCTOR_NAME),
         ]
         if data["admission"]:
             adm = data["admission"]

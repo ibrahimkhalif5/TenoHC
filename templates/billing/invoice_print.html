@@ -266,7 +266,7 @@
             <div class="kv-item"><span class="kv-label">Patient Number</span><span class="kv-value">{{ data.patient.patient_number }}</span></div>
             <div class="kv-item"><span class="kv-label">Invoice Date</span><span class="kv-value">{{ invoice.created_at|date:"d M Y H:i" }}</span></div>
             <div class="kv-item"><span class="kv-label">Gender</span><span class="kv-value">{{ data.patient.get_gender_display }}</span></div>
-            <div class="kv-item"><span class="kv-label">Cashier</span><span class="kv-value">{{ invoice.created_by.get_full_name|default:"System" }}</span></div>
+            <div class="kv-item"><span class="kv-label">Cashier</span><span class="kv-value">{{ cashier_name }}</span></div>
             <div class="kv-item"><span class="kv-label">Age</span><span class="kv-value">{{ data.patient.age }} years</span></div>
             <div class="kv-item"><span class="kv-label">Payment Status</span><span class="kv-value">
                 {% if invoice.status == "PAID" %}<span class="badge bg-success">Paid</span>
@@ -279,7 +279,7 @@
             <div class="kv-item"><span class="kv-label">Patient Category</span><span class="kv-value">{{ data.patient.patient_category|default:"—" }}</span></div>
             <div class="kv-item"><span class="kv-label">Payment Type</span><span class="kv-value">{{ data.patient.get_payment_type_display }}</span></div>
             <div class="kv-item"><span class="kv-label">Visit Type</span><span class="kv-value">{{ data.visit_type }}</span></div>
-            <div class="kv-item"><span class="kv-label">Attending Doctor</span><span class="kv-value">{{ data.doctor_name|default:"—" }}</span></div>
+            <div class="kv-item"><span class="kv-label">Attending Doctor</span><span class="kv-value">{{ doctor_name }}</span></div>
         </div>
 
         <!-- Visit Info -->

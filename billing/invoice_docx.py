@@ -11,6 +11,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn, nsdecls
 from docx.oxml import parse_xml
+from core.constants import CASHIER_NAME, DOCTOR_NAME
 
 
 def _set_cell_shading(cell, color_hex):
@@ -159,7 +160,7 @@ def generate_invoice_docx(data):
         ("Invoice Number", invoice.invoice_number),
         ("Visit Number", invoice.visit.visit_number),
         ("Invoice Date", invoice.created_at.strftime("%d %b %Y %H:%M") if invoice.created_at else "—"),
-        ("Cashier", invoice.created_by.get_full_name() if invoice.created_by else "System"),
+        ("Cashier", CASHIER_NAME),
         ("Payment Status", invoice.get_status_display()),
     ]
     pat_data = [
@@ -188,7 +189,7 @@ def generate_invoice_docx(data):
         ("Registration Date", invoice.visit.visit_date.strftime("%d %b %Y") if invoice.visit.visit_date else "—"),
         ("Consultation Date", data["consultation"].created_at.strftime("%d %b %Y") if data["consultation"] else "—"),
         ("Visit Type", data["visit_type"]),
-        ("Attending Doctor", data["doctor_name"] or "—"),
+        ("Attending Doctor", DOCTOR_NAME),
     ]
     if data["admission"]:
         adm = data["admission"]

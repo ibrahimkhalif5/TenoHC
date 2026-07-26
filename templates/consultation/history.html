@@ -30,7 +30,7 @@
                                 </span>
                             </span>
                             {{ consultation.started_at|date:"M d, Y H:i" }}
-                            <span class="ms-3 text-muted small">{{ consultation.doctor.get_full_name|default:consultation.doctor.username }}</span>
+                            <span class="ms-3 text-muted small">Dr. {{ doctor_name }}</span>
                         </button>
                     </h2>
                     <div id="collapse{{ consultation.pk }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" data-bs-parent="#consultationAccordion">

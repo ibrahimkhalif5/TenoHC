@@ -7,6 +7,7 @@ from datetime import date
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
+from core.constants import DOCTOR_NAME
 
 from .models import Consultation, Prescription
 
@@ -219,7 +220,7 @@ def complete_consultation(consultation_id, prescriptions_data=None,
 
         add_invoice_item(
             invoice,
-            description=f"Consultation Fee - Dr. {consultation.doctor.get_full_name() if consultation.doctor else 'Unknown'}",
+            description=f"Consultation Fee - Dr. {DOCTOR_NAME}",
             quantity=1,
             unit_price=consultation.consultation_fee,
             item=consult_item,

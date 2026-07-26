@@ -38,7 +38,7 @@
                 </div>
                 <div class="card-body">
                     <table class="table table-sm mb-0">
-                        <tr><td>Doctor</td><td><strong>{{ consultation.doctor.get_full_name|default:consultation.doctor.username }}</strong></td></tr>
+                        <tr><td>Doctor</td><td><strong>Dr. {{ doctor_name }}</strong></td></tr>
                         <tr><td>Status</td>
                             <td>
                                 <span class="badge bg-{% if consultation.status == 'COMPLETED' %}success{% elif consultation.status == 'CANCELLED' %}danger{% else %}warning{% endif %}">

@@ -12,6 +12,7 @@ from reportlab.platypus import (
 )
 
 from core.document_service import DocumentTemplateService, PAGE_WIDTH
+from core.constants import DOCTOR_NAME, LAB_TECHNICIAN_NAME
 
 
 # ── Color palette ──────────────────────────────────────────────────
@@ -241,14 +242,9 @@ class LabReportPDFGenerator(DocumentTemplateService):
         visit = self.visit
         w = self.content_width
 
-        first_req = self.lab_requests.first()
-        doctor_name = first_req.requested_by.get_full_name() if first_req and first_req.requested_by else "—"
+        doctor_name = DOCTOR_NAME
 
-        tech_name = "—"
-        for r in self.lab_requests:
-            if r.completed_by:
-                tech_name = r.completed_by.get_full_name()
-                break
+        tech_name = LAB_TECHNICIAN_NAME
 
         completed_date = "—"
         for r in self.lab_requests:
@@ -440,7 +436,7 @@ class LabReportPDFGenerator(DocumentTemplateService):
         s = self.styles
         w = self.content_width
 
-        completed_by = req.completed_by.get_full_name() if req.completed_by else "—"
+        completed_by = LAB_TECHNICIAN_NAME
         completed_date = req.completed_at.strftime("%d %b %Y %H:%M") if req.completed_at else "—"
 
         els = []
@@ -548,7 +544,7 @@ class LabReportPDFGenerator(DocumentTemplateService):
         s = self.styles
         w = self.content_width
 
-        completed_by = req.completed_by.get_full_name() if req.completed_by else "—"
+        completed_by = LAB_TECHNICIAN_NAME
         completed_date = req.completed_at.strftime("%d %b %Y %H:%M") if req.completed_at else "—"
 
         els = []

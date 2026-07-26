@@ -59,7 +59,7 @@
             <div class="item"><span class="label">Category:</span> {{ patient.patient_category|default:"General" }}</div>
             <div class="item"><span class="label">Visit No:</span> {{ visit.visit_number }}</div>
             <div class="item"><span class="label">Visit Date:</span> {{ visit.created_at|date:"d M Y H:i" }}</div>
-            <div class="item"><span class="label">Doctor:</span> Dr. {{ consultation.doctor.get_full_name|default:consultation.doctor.username }}</div>
+            <div class="item"><span class="label">Doctor:</span> Dr. {{ doctor_name }}</div>
         </div>
     </div>
 
@@ -187,7 +187,7 @@
 
             <p style="font-size: 10px; color: #888; margin-top: 4px;">
                 Reference: {{ req.lab_test.normal_range|default:"--" }}
-                {% if req.completed_by %} | Completed by {{ req.completed_by.get_short_name }}{% endif %}
+                | Completed by {{ lab_tech_name }}
                 {% if req.completed_at %} on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
             </p>
             {% if req.remarks %}
@@ -230,7 +230,7 @@
             <p style="color: #999;"><em>Pending results</em></p>
             {% endif %}
             <p style="font-size: 10px; color: #888; margin-top: 4px;">
-                {% if req.completed_by %}Completed by {{ req.completed_by.get_short_name }}{% endif %}
+                Completed by {{ radiologist_name }}
                 {% if req.completed_at %} on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
             </p>
         </div>
@@ -244,7 +244,7 @@
         <div class="section-title">PREVIOUS CONSULTATIONS</div>
         {% for cons in previous_consultations %}
         <div style="margin-bottom: 8px; border-bottom: 1px dotted #ddd; padding-bottom: 5px;">
-            <p><strong>Date:</strong> {{ cons.started_at|date:"d M Y H:i" }} | <strong>Doctor:</strong> Dr. {{ cons.doctor.get_full_name|default:cons.doctor.username }}</p>
+            <p><strong>Date:</strong> {{ cons.started_at|date:"d M Y H:i" }} | <strong>Doctor:</strong> Dr. {{ doctor_name }}</p>
             {% if cons.diagnosis %}<p><strong>Diagnosis:</strong> {{ cons.diagnosis }}</p>{% endif %}
             {% if cons.notes %}<p>{{ cons.notes|truncatewords:30 }}</p>{% endif %}
         </div>

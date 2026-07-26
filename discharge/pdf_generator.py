@@ -9,6 +9,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Spacer, Paragraph
 
 from core.document_service import DocumentTemplateService, SectionDivider
+from core.constants import DOCTOR_NAME
 
 
 class DischargePDFGenerator(DocumentTemplateService):
@@ -80,7 +81,7 @@ class DischargePDFGenerator(DocumentTemplateService):
             self.build_kv_row("Bed Number", bed.bed_number),
             self.build_kv_row(
                 "Attending Doctor",
-                admission.admitted_by.get_full_name() if admission.admitted_by else "—",
+                DOCTOR_NAME,
             ),
         ]
 
@@ -156,11 +157,7 @@ class DischargePDFGenerator(DocumentTemplateService):
         s = self.styles
         half = self.content_width / 2
 
-        doctor_name = ""
-        if summary.finalized_by:
-            doctor_name = summary.finalized_by.get_full_name()
-        elif admission.admitted_by:
-            doctor_name = admission.admitted_by.get_full_name()
+        doctor_name = DOCTOR_NAME
 
         els = []
         els.extend(self.build_section_heading("DOCTOR INFORMATION"))

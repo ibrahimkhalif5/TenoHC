@@ -4,6 +4,7 @@ for a given visit, and provides PDF/DOCX generation.
 """
 from decimal import Decimal
 from collections import OrderedDict
+from core.constants import CASHIER_NAME, DOCTOR_NAME
 
 
 def get_invoice_data(invoice):
@@ -233,7 +234,7 @@ def get_invoice_data(invoice):
             "receipt_number": p.receipt_number,
             "payment_method": p.get_payment_method_display(),
             "amount": p.amount,
-            "cashier": p.received_by.get_full_name() if p.received_by else "System",
+            "cashier": CASHIER_NAME,
         })
 
     # ── Bill summary ──
@@ -276,11 +277,7 @@ def get_invoice_data(invoice):
     visit_type = "Inpatient" if is_inpatient else "Outpatient"
 
     # ── Attending doctor ──
-    doctor_name = ""
-    if consultation and consultation.doctor:
-        doctor_name = consultation.doctor.get_full_name()
-    elif admission and admission.admitted_by:
-        doctor_name = admission.admitted_by.get_full_name()
+    doctor_name = DOCTOR_NAME
 
     return {
         "hospital": hospital,

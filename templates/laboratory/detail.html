@@ -68,7 +68,7 @@
         <div><div class="label">Phone</div><div class="value">{{ patient.phone }}</div></div>
         <div><div class="label">Payment Type</div><div class="value">{{ patient.get_payment_type_display }}</div></div>
         {% if requesting_doctor %}
-        <div><div class="label">Requesting Doctor</div><div class="value">{{ requesting_doctor.get_full_name }}</div></div>
+        <div><div class="label">Requesting Doctor</div><div class="value">Dr. {{ doctor_name }}</div></div>
         {% endif %}
         <div><div class="label">Date</div><div class="value">{% now "d M Y H:i" %}</div></div>
     </div>
@@ -144,7 +144,7 @@
         <div class="card shadow-sm mb-3">
             <div class="card-body py-2">
                 <small class="text-muted">Requesting Doctor</small>
-                <div class="fw-semibold"><i class="bi bi-person-badge me-1"></i>{{ requesting_doctor.get_full_name }}</div>
+                <div class="fw-semibold"><i class="bi bi-person-badge me-1"></i>Dr. {{ doctor_name }}</div>
             </div>
         </div>
         {% endif %}

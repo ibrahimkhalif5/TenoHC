@@ -69,7 +69,7 @@
             <div class="info-item"><span class="info-label">Ward:</span><span class="info-value">{{ admission.ward.name }} ({{ admission.ward.get_ward_type_display }})</span></div>
             <div class="info-item"><span class="info-label">Room:</span><span class="info-value">{{ admission.room.room_number }} ({{ admission.room.get_room_type_display }})</span></div>
             <div class="info-item"><span class="info-label">Bed Number:</span><span class="info-value">{{ admission.bed.bed_number }}</span></div>
-            <div class="info-item"><span class="info-label">Attending Doctor:</span><span class="info-value">{{ admission.admitted_by.get_full_name|default:"—" }}</span></div>
+            <div class="info-item"><span class="info-label">Attending Doctor:</span><span class="info-value">Dr. {{ doctor_name }}</span></div>
         </div>
 
         <!-- Clinical Information -->
@@ -174,7 +174,7 @@
             <div class="row">
                 <div class="col-6">
                     <div class="field-label">Doctor Name</div>
-                    <div class="field-text">{{ summary.finalized_by.get_full_name|default:admission.admitted_by.get_full_name|default:"—" }}</div>
+                    <div class="field-text">Dr. {{ doctor_name }}</div>
                 </div>
                 <div class="col-6">
                     <div class="field-label">Date</div>

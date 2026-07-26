@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import DischargeSummary, DischargeMedication
+from core.constants import DOCTOR_NAME
 
 
 def get_discharge_summary(admission_id):
@@ -184,8 +185,7 @@ def auto_populate_summary(summary):
         # All consultation notes (most recent first)
         for c in consultations:
             if c.notes and c.notes.strip():
-                doctor_name = c.doctor.get_full_name() if c.doctor else "Doctor"
-                hpi_parts.append(f"Consultation ({doctor_name}): {c.notes.strip()}")
+                hpi_parts.append(f"Consultation ({DOCTOR_NAME}): {c.notes.strip()}")
         # Admission notes
         if admission.notes and admission.notes.strip():
             hpi_parts.append(f"Admission Notes: {admission.notes.strip()}")
@@ -237,8 +237,7 @@ def auto_populate_summary(summary):
         # Consultation treatment plans
         for c in consultations:
             if c.treatment_plan and c.treatment_plan.strip():
-                doctor_name = c.doctor.get_full_name() if c.doctor else "Doctor"
-                tx_parts.append(f"Doctor's Plan ({doctor_name}): {c.treatment_plan.strip()}")
+                tx_parts.append(f"Doctor's Plan ({DOCTOR_NAME}): {c.treatment_plan.strip()}")
                 break
         # Prescriptions
         if prescriptions:
