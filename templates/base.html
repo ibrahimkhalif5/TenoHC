@@ -454,9 +454,29 @@
         </div>
     </div>
 
+    <!-- Modern Confirm Modal -->
+    <div class="modal fade" id="appConfirmModal" tabindex="-1" aria-labelledby="appConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="appConfirmModalLabel">
+                        <i class="bi bi-question-circle-fill text-warning me-2"></i>Confirm
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="appConfirmMessage" class="mb-0 fs-6"></p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary px-3" id="appConfirmCancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-3" id="appConfirmOk">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Replace native alert() with Bootstrap modal
-        window._originalAlert = window.alert;
         window.alert = function(message, title) {
             var modal = document.getElementById('appAlertModal');
             var msgEl = document.getElementById('appAlertMessage');
@@ -467,9 +487,52 @@
             } else {
                 titleEl.innerHTML = '<i class="bi bi-info-circle-fill text-primary me-2"></i>Notice';
             }
-            var bsModal = new bootstrap.Modal(modal);
-            bsModal.show();
+            new bootstrap.Modal(modal).show();
         };
+
+        // Replace native confirm() with Bootstrap modal (returns Promise)
+        window.appConfirm = function(message) {
+            return new Promise(function(resolve) {
+                var modal = document.getElementById('appConfirmModal');
+                var msgEl = document.getElementById('appConfirmMessage');
+                msgEl.textContent = message;
+                var bsModal = new bootstrap.Modal(modal);
+
+                document.getElementById('appConfirmOk').onclick = function() {
+                    bsModal.hide();
+                    resolve(true);
+                };
+                document.getElementById('appConfirmCancel').onclick = function() {
+                    bsModal.hide();
+                    resolve(false);
+                };
+                modal.querySelector('.btn-close').onclick = function() {
+                    bsModal.hide();
+                    resolve(false);
+                };
+                bsModal.show();
+            });
+        };
+
+        // Event delegation: any element with data-confirm uses appConfirm
+        document.addEventListener('click', function(e) {
+            var el = e.target.closest('[data-confirm]');
+            if (!el) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var msg = el.getAttribute('data-confirm');
+            appConfirm(msg).then(function(ok) {
+                if (!ok) return;
+                // If it's a form submit button, submit the form
+                var form = el.closest('form');
+                if (form) {
+                    form.submit();
+                } else {
+                    // It's a link — navigate
+                    if (el.href) window.location.href = el.href;
+                }
+            });
+        }, true);
     </script>
 </body>
 </html>

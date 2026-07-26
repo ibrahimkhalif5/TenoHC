@@ -88,8 +88,7 @@
                     </ul>
                     <form method="post">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-danger btn-lg w-100"
-                                onclick="return confirm('Are you sure you want to discharge {{ admission.patient.full_name }}?')">
+                        <button type="submit" data-confirm="Are you sure you want to discharge {{ admission.patient.full_name }}?" class="btn btn-danger btn-lg w-100">
                             <i class="bi bi-box-arrow-right me-2"></i>Confirm Discharge
                         </button>
                     </form>

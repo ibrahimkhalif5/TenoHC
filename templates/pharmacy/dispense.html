@@ -63,7 +63,7 @@
                     {% if pending_prescriptions|length > 1 %}
                     <form method="post" action="{% url 'pharmacy:pharmacy-dispense-all' visit.pk %}" class="d-inline">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-light btn-sm" onclick="return confirm('Dispense all pending prescriptions?')">
+                        <button type="submit" data-confirm="Dispense all pending prescriptions?" class="btn btn-light btn-sm">
                             <i class="bi bi-lightning me-1"></i>Dispense All
                         </button>
                     </form>
@@ -93,7 +93,7 @@
                             <div class="mt-3">
                                 <form method="post" action="{% url 'pharmacy:pharmacy-dispense-single' rx.pk %}">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Dispense {{ rx.medicine.name }} x{{ rx.quantity }}?')">
+                                    <button type="submit" data-confirm="Dispense {{ rx.medicine.name }} x{{ rx.quantity }}?" class="btn btn-success btn-sm">
                                         <i class="bi bi-check-lg me-1"></i>Dispense
                                     </button>
                                 </form>
@@ -111,7 +111,7 @@
                     <p class="text-muted mb-3">All prescribed medications for this patient have been dispensed.</p>
                     <form method="post" action="{% url 'pharmacy:pharmacy-finish-visit' visit.pk %}" class="d-inline">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Mark this visit as completed?')">
+                        <button type="submit" data-confirm="Mark this visit as completed?" class="btn btn-success btn-lg">
                             <i class="bi bi-check-lg me-1"></i>Finish Visit
                         </button>
                     </form>

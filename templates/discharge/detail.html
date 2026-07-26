@@ -50,10 +50,9 @@
                 <i class="bi bi-arrow-left me-1"></i>Back
             </a>
             {% if summary.status != "FINALIZED" %}
-            <form method="post" action="{% url 'discharge:discharge-summary-finalize' summary.pk %}" class="d-inline"
-                  onsubmit="return confirm('Are you sure you want to finalize this discharge summary? The patient will be discharged and the bed will be freed.')">
+            <form method="post" action="{% url 'discharge:discharge-summary-finalize' summary.pk %}" class="d-inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-success btn-sm">
+                <button type="submit" data-confirm="Are you sure you want to finalize this discharge summary? The patient will be discharged and the bed will be freed." class="btn btn-success btn-sm">
                     <i class="bi bi-check-circle me-1"></i>Finalize Discharge
                 </button>
             </form>
@@ -307,10 +306,9 @@
                             <td>{{ med.instructions|default:"—" }}</td>
                             {% if summary.status != "FINALIZED" %}
                             <td class="text-center">
-                                <form method="post" action="{% url 'discharge:discharge-medication-remove' med.pk %}" class="d-inline"
-                                      onsubmit="return confirm('Remove this medication?')">
+                                <form method="post" action="{% url 'discharge:discharge-medication-remove' med.pk %}" class="d-inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Remove">
+                                    <button type="submit" data-confirm="Remove this medication?" class="btn btn-outline-danger btn-sm" title="Remove">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
