@@ -357,13 +357,54 @@ def remove_discharge_medication(medication_id):
 
 def get_investigations_for_visit(visit):
     """Retrieve lab and radiology investigations for a visit."""
-    from laboratory.models import LabRequest
-    from radiology.models import RadiologyRequest
+    from laboratory.models import LabRequest, LabTestResultValue
 
-    labs = LabRequest.objects.filter(visit=visit).select_related("lab_test")
+    labs = (
+        LabRequest.objects
+        .filter(visit=visit)
+        .select_related("lab_test")
+        .prefetch_related("result_values__parameter")
+    )
+
+    # Attach structured results to each lab request
+    labs_with_results = []
+    for lab in labs:
+        structured = {}
+        for rv in lab.result_values.all():
+            structured[rv.parameter.name] = {
+                "value": rv.value,
+                "unit": rv.parameter.unit,
+                "normal_range": rv.parameter.normal_range,
+            }
+
+        # Determine display result
+        display_result = ""
+        if structured:
+            parts = []
+            for name, data in structured.items():
+                line = f"{name}: {data['value']}"
+                if data["unit"]:
+                    line += f" {data['unit']}"
+                if data["normal_range"]:
+                    line += f" (Ref: {data['normal_range']})"
+                parts.append(line)
+            display_result = ", ".join(parts)
+        elif lab.result:
+            display_result = lab.result
+
+        labs_with_results.append({
+            "lab_test": lab.lab_test,
+            "result": display_result or "Pending",
+            "remarks": lab.remarks,
+            "is_completed": lab.is_completed,
+            "result_status": lab.result_status,
+            "structured": structured,
+        })
+
+    from radiology.models import RadiologyRequest
     rads = RadiologyRequest.objects.filter(visit=visit).select_related("radiology_service")
 
-    return labs, rads
+    return labs_with_results, rads
 
 
 def get_treatments_for_admission(admission):

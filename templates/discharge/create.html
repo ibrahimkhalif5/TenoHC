@@ -193,7 +193,11 @@
                             <strong class="text-primary">Laboratory Tests:</strong>
                             <ul class="mb-2">
                                 {% for lab in labs %}
-                                <li><strong>{{ lab.lab_test.name }}</strong> &mdash; {{ lab.result|default:"Pending" }}</li>
+                                <li>
+                                    <strong>{{ lab.lab_test.name }}</strong> &mdash; {{ lab.result }}
+                                    {% if lab.remarks %}<br><em class="text-muted ms-2">Remarks: {{ lab.remarks }}</em>{% endif %}
+                                    {% if not lab.is_completed %}<span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;">Pending</span>{% endif %}
+                                </li>
                                 {% endfor %}
                             </ul>
                             {% endif %}
