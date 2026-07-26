@@ -5,8 +5,8 @@ from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from django.views.static import serve as static_serve
 
-admin.site.site_header = "THHIMS Administration"
-admin.site.site_title = "THHIMS Admin"
+admin.site.site_header = "TCHIMS Administration"
+admin.site.site_title = "TCHIMS Admin"
 admin.site.index_title = "Hospital Management"
 
 urlpatterns = [

@@ -1,4 +1,4 @@
-// THHIMS Custom JavaScript
+// TCHIMS Custom JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-dismiss alerts after 5 seconds (single handler)
