@@ -79,6 +79,38 @@
         </table>
     </div>
 
+    <!-- Triage Vitals -->
+    <div class="section">
+        <div class="section-title warning">TRIAGE VITALS</div>
+        {% if triage %}
+        <table>
+            <tr>
+                <th>Temp (°C)</th><th>BP (mmHg)</th><th>Pulse (bpm)</th><th>RR (/min)</th><th>SpO2 (%)</th><th>Weight (kg)</th><th>Height (cm)</th>
+            </tr>
+            <tr>
+                <td>{{ triage.temperature }}</td>
+                <td>{% if triage.blood_pressure_systolic and triage.blood_pressure_diastolic %}{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }}{% else %}--{% endif %}</td>
+                <td>{{ triage.pulse }}</td>
+                <td>{{ triage.respiratory_rate }}</td>
+                <td>{{ triage.oxygen_saturation }}</td>
+                <td>{{ triage.weight }}</td>
+                <td>{{ triage.height }}</td>
+            </tr>
+        </table>
+        {% if triage.chief_complaint %}
+        <p><strong>Chief Complaint:</strong> {{ triage.chief_complaint }}</p>
+        {% endif %}
+        {% if triage.nurse_notes %}
+        <p><strong>Nurse Notes:</strong> {{ triage.nurse_notes }}</p>
+        {% endif %}
+        <p style="font-size: 10px; color: #888; margin-top: 4px;">
+            Assessed by {{ triage.assessed_by.get_short_name|default:"--" }} on {{ triage.assessed_at|date:"d M Y H:i" }}
+        </p>
+        {% else %}
+        <p class="no-data">No triage vitals recorded.</p>
+        {% endif %}
+    </div>
+
     <!-- Laboratory Results -->
     <div class="section">
         <div class="section-title">LABORATORY TESTS</div>
@@ -240,6 +272,45 @@
         </table>
         {% else %}
         <p class="no-data">No medications dispensed yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Billing Summary -->
+    <div class="section">
+        <div class="section-title secondary">BILLING SUMMARY</div>
+        {% if invoice %}
+        <table>
+            <thead>
+                <tr><th>#</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.items.all %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>KSH {{ item.unit_price|floatformat:2 }}</td>
+                    <td>KSH {{ item.total_price|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" style="text-align: right;"><strong>Total Amount:</strong></td>
+                    <td><strong>KSH {{ invoice.total_amount|floatformat:2 }}</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="text-align: right;">Amount Paid:</td>
+                    <td>KSH {{ invoice.amount_paid|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="text-align: right;">Balance:</td>
+                    <td><strong>KSH {{ invoice.balance|floatformat:2 }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <p class="no-data">No billing record found.</p>
         {% endif %}
     </div>
 

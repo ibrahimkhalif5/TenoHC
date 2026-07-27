@@ -421,6 +421,11 @@ class GeneralReportView(LoginRequiredMixin, View):
             visit=visit,
         ).select_related("medicine", "prescription", "dispensed_by").order_by("-dispensed_at")
 
+        triage = visit.triage_assessments.select_related("assessed_by").first()
+
+        from billing.models import Invoice
+        invoice = Invoice.objects.filter(visit=visit).prefetch_related("items").first()
+
         return render(request, "consultation/general_report.html", {
             "consultation": consultation,
             "visit": visit,
@@ -429,4 +434,6 @@ class GeneralReportView(LoginRequiredMixin, View):
             "rad_requests": rad_requests,
             "prescriptions": prescriptions,
             "dispenses": dispenses,
+            "triage": triage,
+            "invoice": invoice,
         })
