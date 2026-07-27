@@ -13,7 +13,7 @@
         <div>
             <a href="{% url 'consultation:general-report' consultation_id=consultation.pk %}" 
                class="btn btn-outline-success btn-sm me-2" target="_blank">
-                <i class="bi bi-file-earmark-medical me-1"></i>Test Report
+                <i class="bi bi-file-earmark-medical me-1"></i>General Test Report for Patient {{ visit.patient.full_name }}
             </a>
             <a href="{% url 'consultation:consultation-print' consultation_id=consultation.pk %}" 
                class="btn btn-outline-primary btn-sm me-2" target="_blank">
