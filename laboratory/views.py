@@ -73,11 +73,10 @@ class LabVisitDetailView(LoginRequiredMixin, View):
             result_values = {}
             if template:
                 parameters = list(template.parameters.order_by("display_order", "name"))
-                result_values = dict(
-                    LabTestResultValue.objects
-                    .filter(lab_request=req)
-                    .values_list("parameter_id", "value")
-                )
+                result_values = {}
+                for rv in LabTestResultValue.objects.filter(lab_request=req):
+                    if not rv.value.startswith("{"):
+                        result_values[rv.parameter_id] = rv.value
             request_data.append({
                 "req": req,
                 "template": template,
