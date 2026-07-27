@@ -495,7 +495,7 @@ class LabReportPDFGenerator(DocumentTemplateService):
              Paragraph("<b>Reference Range</b>", s["TableHeaderModern"]),
              Paragraph("<b>Remarks</b>", s["TableHeaderModern"])],
             [Paragraph(req.result or "—", s["TableCellBold"]),
-             Paragraph(req.lab_test.normal_range or "—", s["TableCellModern"]),
+             Paragraph(req.lab_test.reference_range or "—", s["TableCellModern"]),
              Paragraph(req.remarks or "—", s["TableCellModern"])],
         ]
 

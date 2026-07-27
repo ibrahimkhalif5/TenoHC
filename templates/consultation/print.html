@@ -186,7 +186,7 @@
             {% endif %}
 
             <p style="font-size: 10px; color: #888; margin-top: 4px;">
-                Reference Range: {{ req.lab_test.normal_range|default:"--" }}
+                Reference Range: {{ req.lab_test.reference_range|default:"--" }}
                 | Completed by {{ lab_tech_name }}
                 {% if req.completed_at %} on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
             </p>

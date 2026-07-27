@@ -31,6 +31,15 @@ class LabTest(IsActiveModel):
     def __str__(self):
         return f"{self.name} ({self.get_category_display()})"
 
+    @property
+    def reference_range(self):
+        """Return normal_range, falling back to linked Item's normal_range."""
+        if self.normal_range:
+            return self.normal_range
+        if self.item and self.item.normal_range:
+            return self.item.normal_range
+        return ""
+
 
 class LabRequest(TimeStampedModel):
     """A laboratory test request for a patient visit."""

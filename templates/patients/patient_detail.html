@@ -195,7 +195,7 @@
                         <tr>
                             <td><small>{{ lab.created_at|date:"d M Y" }}</small></td>
                             <td>{{ lab.lab_test.name }}</td>
-                            <td><small class="text-muted">{{ lab.lab_test.normal_range|default:"--" }}</small></td>
+                            <td><small class="text-muted">{{ lab.lab_test.reference_range|default:"--" }}</small></td>
                             <td><small>{{ lab.result|truncatewords:10|default:"--" }}</small></td>
                             <td>{% if lab.is_completed %}<span class="badge bg-success">Completed</span>{% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}</td>
                         </tr>
