@@ -23,7 +23,12 @@ class TriageAssessView(LoginRequiredMixin, View):
     """Triage assessment: view patient info + capture vitals."""
 
     def get(self, request, visit_id):
-        visit = services.get_visit(visit_id)
+        visit = get_object_or_404(
+            Visit.objects.select_related(
+                "patient", "patient__patient_category", "created_by",
+            ).prefetch_related("triage_assessments", "events"),
+            pk=visit_id,
+        )
         if visit.status != Visit.Status.WAITING_TRIAGE:
             messages.warning(request, "This patient is not waiting for triage.")
             return redirect("triage:triage-list")
@@ -35,7 +40,12 @@ class TriageAssessView(LoginRequiredMixin, View):
         })
 
     def post(self, request, visit_id):
-        visit = services.get_visit(visit_id)
+        visit = get_object_or_404(
+            Visit.objects.select_related(
+                "patient", "patient__patient_category", "created_by",
+            ).prefetch_related("triage_assessments", "events"),
+            pk=visit_id,
+        )
         if visit.status != Visit.Status.WAITING_TRIAGE:
             messages.warning(request, "This patient is not waiting for triage.")
             return redirect("triage:triage-list")
