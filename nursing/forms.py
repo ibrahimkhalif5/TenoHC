@@ -32,6 +32,8 @@ class DailyVitalsForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["blood_pressure_systolic"].required = False
+        self.fields["blood_pressure_diastolic"].required = False
         self.helper = FormHelper()
         self.helper.form_method = "post"
         self.helper.layout = Layout(

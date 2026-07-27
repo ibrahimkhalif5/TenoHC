@@ -198,9 +198,10 @@ def auto_populate_summary(summary):
         findings = []
         # Triage vitals
         if triage:
+            bp_text = f"BP: {triage.blood_pressure_systolic}/{triage.blood_pressure_diastolic} mmHg | " if triage.blood_pressure_systolic and triage.blood_pressure_diastolic else ""
             vitals_text = (
                 f"Temperature: {triage.temperature}\u00b0C | "
-                f"BP: {triage.blood_pressure_systolic}/{triage.blood_pressure_diastolic} mmHg | "
+                f"{bp_text}"
                 f"Pulse: {triage.pulse} bpm | "
                 f"RR: {triage.respiratory_rate}/min | "
                 f"SpO2: {triage.oxygen_saturation}% | "
@@ -216,10 +217,10 @@ def auto_populate_summary(summary):
         # Latest daily vitals
         if daily_vitals:
             latest = daily_vitals[0]
+            bp_part = f", BP {latest.blood_pressure_systolic}/{latest.blood_pressure_diastolic}" if latest.blood_pressure_systolic and latest.blood_pressure_diastolic else ""
             findings.append(
                 f"Latest Vitals ({latest.record_date}): "
-                f"Temp {latest.temperature}\u00b0C, "
-                f"BP {latest.blood_pressure_systolic}/{latest.blood_pressure_diastolic}, "
+                f"Temp {latest.temperature}\u00b0C{bp_part}, "
                 f"Pulse {latest.pulse}, SpO2 {latest.oxygen_saturation}%"
             )
         # Consultation clinical findings
@@ -286,9 +287,10 @@ def auto_populate_summary(summary):
                     f"[{note.created_at.strftime('%d %b %Y %H:%M')}] {note.note}"
                 )
         if daily_vitals and len(daily_vitals) > 1:
+            bp_progress = f"BP {daily_vitals[0].blood_pressure_systolic}/{daily_vitals[0].blood_pressure_diastolic}, " if daily_vitals[0].blood_pressure_systolic and daily_vitals[0].blood_pressure_diastolic else ""
             progress_parts.append(
                 f"Vitals monitored daily over {len(daily_vitals)} day(s). "
-                f"Latest: BP {daily_vitals[0].blood_pressure_systolic}/{daily_vitals[0].blood_pressure_diastolic}, "
+                f"Latest: {bp_progress}"
                 f"Temp {daily_vitals[0].temperature}\u00b0C"
             )
         if visit_events:

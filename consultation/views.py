@@ -84,13 +84,6 @@ class ConductConsultationView(LoginRequiredMixin, View):
         from triage.services import get_visit_timeline
         timeline = get_visit_timeline(visit)
 
-        from core.models import Item
-        available_medicines = (
-            Item.objects
-            .filter(category=Item.Category.MEDICINE, is_active=True)
-            .order_by("name")
-        )
-
         return render(request, "consultation/conduct.html", {
             "consultation": consultation,
             "visit": visit,
@@ -103,7 +96,6 @@ class ConductConsultationView(LoginRequiredMixin, View):
             "previous_rad_requests": previous_rad_requests,
             "previous_consultations": previous_consultations,
             "timeline": timeline,
-            "available_medicines": available_medicines,
         })
 
     def post(self, request, consultation_id):
@@ -391,4 +383,50 @@ class ConsultationPrintView(LoginRequiredMixin, View):
             "previous_rad_requests": previous_rad_requests,
             "previous_consultations": previous_consultations,
             "timeline": timeline,
+        })
+
+
+class GeneralReportView(LoginRequiredMixin, View):
+    """General printable report: lab tests, radiology, prescriptions, pharmacy dispenses."""
+
+    def get(self, request, consultation_id):
+        consultation = get_object_or_404(
+            Consultation.objects.select_related(
+                "visit", "visit__patient", "doctor",
+            ).prefetch_related(
+                "prescriptions", "prescriptions__medicine",
+            ),
+            pk=consultation_id,
+        )
+        visit = consultation.visit
+        patient = visit.patient
+
+        from laboratory.models import LabRequest
+        from radiology.models import RadiologyRequest
+        from pharmacy.models import PharmacyDispense
+
+        lab_requests = LabRequest.objects.filter(
+            visit=visit,
+        ).select_related("lab_test", "completed_by").prefetch_related(
+            "result_values__parameter"
+        ).order_by("-created_at")
+
+        rad_requests = RadiologyRequest.objects.filter(
+            visit=visit,
+        ).select_related("radiology_service", "completed_by").order_by("-created_at")
+
+        prescriptions = consultation.prescriptions.select_related("medicine").order_by("created_at")
+
+        dispenses = PharmacyDispense.objects.filter(
+            visit=visit,
+        ).select_related("medicine", "prescription", "dispensed_by").order_by("-dispensed_at")
+
+        return render(request, "consultation/general_report.html", {
+            "consultation": consultation,
+            "visit": visit,
+            "patient": patient,
+            "lab_requests": lab_requests,
+            "rad_requests": rad_requests,
+            "prescriptions": prescriptions,
+            "dispenses": dispenses,
         })

@@ -27,8 +27,10 @@ class TriageAssessmentForm(forms.ModelForm):
         self.fields["pulse"].initial = 72
         self.fields["respiratory_rate"].initial = 16
         self.fields["oxygen_saturation"].initial = 98
-        self.fields["blood_pressure_systolic"].initial = 120
-        self.fields["blood_pressure_diastolic"].initial = 80
+        self.fields["blood_pressure_systolic"].required = False
+        self.fields["blood_pressure_diastolic"].required = False
+        self.fields["blood_pressure_systolic"].initial = None
+        self.fields["blood_pressure_diastolic"].initial = None
         self.fields["weight"].initial = 70.0
         self.fields["height"].initial = 170.0
         self.helper = FormHelper()
@@ -62,14 +64,14 @@ class TriageAssessmentForm(forms.ModelForm):
         return val
 
     def clean_blood_pressure_systolic(self):
-        val = self.cleaned_data["blood_pressure_systolic"]
-        if val < 60 or val > 300:
+        val = self.cleaned_data.get("blood_pressure_systolic")
+        if val is not None and (val < 60 or val > 300):
             raise forms.ValidationError("Systolic BP must be between 60 and 300")
         return val
 
     def clean_blood_pressure_diastolic(self):
-        val = self.cleaned_data["blood_pressure_diastolic"]
-        if val < 30 or val > 200:
+        val = self.cleaned_data.get("blood_pressure_diastolic")
+        if val is not None and (val < 30 or val > 200):
             raise forms.ValidationError("Diastolic BP must be between 30 and 200")
         return val
 

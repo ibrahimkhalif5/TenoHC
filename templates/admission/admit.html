@@ -40,7 +40,7 @@
                     {% with triage=visit.triage_assessments.first %}
                     <table class="table table-sm mb-0">
                         <tr><td>Temp</td><td><strong>{{ triage.temperature }}°C</strong></td></tr>
-                        <tr><td>BP</td><td><strong>{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg</strong></td></tr>
+                        <tr><td>BP</td><td><strong>{% if triage.blood_pressure_systolic and triage.blood_pressure_diastolic %}{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg{% else %}--{% endif %}</strong></td></tr>
                         <tr><td>Pulse</td><td><strong>{{ triage.pulse }} bpm</strong></td></tr>
                         <tr><td>O₂ Sat</td><td><strong>{{ triage.oxygen_saturation }}%</strong></td></tr>
                     </table>

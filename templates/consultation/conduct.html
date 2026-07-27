@@ -11,6 +11,10 @@
             {% if is_review %}Review Results{% else %}Conduct Consultation{% endif %}
         </h5>
         <div>
+            <a href="{% url 'consultation:general-report' consultation_id=consultation.pk %}" 
+               class="btn btn-outline-success btn-sm me-2" target="_blank">
+                <i class="bi bi-file-earmark-medical me-1"></i>General Report
+            </a>
             <a href="{% url 'consultation:consultation-print' consultation_id=consultation.pk %}" 
                class="btn btn-outline-primary btn-sm me-2" target="_blank">
                 <i class="bi bi-printer me-1"></i>Print Report
@@ -60,7 +64,7 @@
                 <div class="card-body">
                     <table class="table table-sm mb-0">
                         <tr><td>Temp</td><td>{{ assessment.temperature }} °C</td></tr>
-                        <tr><td>BP</td><td>{{ assessment.blood_pressure_systolic }}/{{ assessment.blood_pressure_diastolic }} mmHg</td></tr>
+                        <tr><td>BP</td><td>{% if assessment.blood_pressure_systolic and assessment.blood_pressure_diastolic %}{{ assessment.blood_pressure_systolic }}/{{ assessment.blood_pressure_diastolic }} mmHg{% else %}<span class="text-muted">--</span>{% endif %}</td></tr>
                         <tr><td>Pulse</td><td>{{ assessment.pulse }} bpm</td></tr>
                         <tr><td>RR</td><td>{{ assessment.respiratory_rate }} /min</td></tr>
                         <tr><td>SpO2</td><td>{{ assessment.oxygen_saturation }}%</td></tr>
@@ -378,14 +382,17 @@
                                 <div class="row g-2">
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold">Medicine</label>
-                                        <select name="prescriptions-{{ forloop.counter0 }}-medicine"
-                                                id="id_prescriptions-{{ forloop.counter0 }}-medicine"
-                                                class="form-select form-select-sm medicine-select">
-                                            <option value="">-- Select Medicine --</option>
-                                            {% for item in available_medicines %}
-                                            <option value="{{ item.pk }}">{{ item.item_code }} - {{ item.name }} (KSH {{ item.unit_price|floatformat:2 }})</option>
-                                            {% endfor %}
-                                        </select>
+                                        <input type="hidden" name="prescriptions-{{ forloop.counter0 }}-medicine"
+                                               id="id_prescriptions-{{ forloop.counter0 }}-medicine" value="">
+                                        <div class="position-relative">
+                                            <input type="text" class="form-control form-control-sm rx-search"
+                                                   id="rx-search-{{ forloop.counter0 }}"
+                                                   placeholder="Type to search medicine..."
+                                                   autocomplete="off">
+                                            <div class="rx-search-results position-absolute w-100 bg-white border rounded shadow-sm d-none"
+                                                 style="z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+                                        </div>
+                                        <div class="rx-selected-name small text-muted mt-1" id="rx-selected-{{ forloop.counter0 }}"></div>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small fw-bold">Dosage</label>
@@ -576,6 +583,71 @@ document.addEventListener('DOMContentLoaded', function() {
         category: 'RADIOLOGY,ULTRASOUND',
     });
 
+    // ── Medicine Search for Prescription Forms ──
+    function initMedicineSearch(formEl) {
+        var searchInput = formEl.querySelector('.rx-search');
+        var resultsDiv = formEl.querySelector('.rx-search-results');
+        var hiddenInput = formEl.querySelector('input[name$="-medicine"]');
+        var selectedName = formEl.querySelector('.rx-selected-name');
+        if (!searchInput || !resultsDiv || !hiddenInput) return;
+
+        var debounceTimer;
+
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            var query = this.value.trim();
+            if (query.length < 2) {
+                resultsDiv.classList.add('d-none');
+                return;
+            }
+            debounceTimer = setTimeout(function() {
+                fetch('/api/item-search-json/?q=' + encodeURIComponent(query) + '&category=MEDICINE')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        resultsDiv.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(function(item) {
+                                var el = document.createElement('div');
+                                el.className = 'p-2 border-bottom';
+                                el.style.cursor = 'pointer';
+                                el.innerHTML = '<strong>' + item.name + '</strong>' +
+                                    ' <small class="text-muted">(' + item.item_code + ')</small>' +
+                                    ' <span class="badge bg-success">KSH ' + parseFloat(item.unit_price).toLocaleString() + '</span>';
+                                el.addEventListener('click', function() {
+                                    hiddenInput.value = item.id;
+                                    searchInput.value = item.name + ' (' + item.item_code + ')';
+                                    selectedName.textContent = item.name + ' - KSH ' + parseFloat(item.unit_price).toLocaleString();
+                                    resultsDiv.classList.add('d-none');
+                                });
+                                el.addEventListener('mouseenter', function() {
+                                    this.style.backgroundColor = '#f0f4ff';
+                                });
+                                el.addEventListener('mouseleave', function() {
+                                    this.style.backgroundColor = '';
+                                });
+                                resultsDiv.appendChild(el);
+                            });
+                            resultsDiv.classList.remove('d-none');
+                        } else {
+                            resultsDiv.innerHTML = '<div class="p-2 text-center text-muted"><small>No medicines found</small></div>';
+                            resultsDiv.classList.remove('d-none');
+                        }
+                    });
+            }, 300);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+                resultsDiv.classList.add('d-none');
+            }
+        });
+    }
+
+    // Init medicine search on existing forms
+    container.querySelectorAll('.prescription-form').forEach(function(form) {
+        initMedicineSearch(form);
+    });
+
     // ── X button removes prescription ──
     container.addEventListener('click', function(e) {
         var btn = e.target.closest('.remove-rx');
@@ -587,7 +659,7 @@ document.addEventListener('DOMContentLoaded', function() {
         form.style.display = 'none';
     });
 
-    // ── Add Prescription (dropdown clone) ──
+    // ── Add Prescription (clone + init medicine search) ──
     if (addBtn && container && totalForms) {
         addBtn.addEventListener('click', function() {
             const formCount = parseInt(totalForms.value);
@@ -597,8 +669,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Find last visible form to clone from
-            const allForms = container.querySelectorAll('.prescription-form');
+            var allForms = container.querySelectorAll('.prescription-form');
             var lastForm = null;
             for (var i = allForms.length - 1; i >= 0; i--) {
                 if (allForms[i].style.display !== 'none') {
@@ -609,14 +680,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!lastForm) lastForm = allForms[allForms.length - 1];
             if (!lastForm) return;
 
-            const clone = lastForm.cloneNode(true);
+            var clone = lastForm.cloneNode(true);
             clone.style.display = '';
 
-            // Rename all form inputs
+            // Rename inputs and clear values
             clone.querySelectorAll('input, select, textarea').forEach(function(input) {
-                const name = input.getAttribute('name');
+                var name = input.getAttribute('name');
                 if (name) {
-                    const newName = name.replace(/prescriptions-(\d+)-/, 'prescriptions-' + formCount + '-');
+                    var newName = name.replace(/prescriptions-(\d+)-/, 'prescriptions-' + formCount + '-');
                     input.setAttribute('name', newName);
                     input.setAttribute('id', 'id_' + newName);
                     if (input.type !== 'checkbox' && input.type !== 'hidden') {
@@ -628,22 +699,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Update labels
-            clone.querySelectorAll('label').forEach(function(label) {
-                const htmlFor = label.getAttribute('for');
-                if (htmlFor) {
-                    label.setAttribute('for', htmlFor.replace(/id_prescriptions-(\d+)-/, 'id_prescriptions-' + formCount + '-'));
-                }
-            });
+            // Update search input IDs
+            var searchInput = clone.querySelector('.rx-search');
+            if (searchInput) {
+                searchInput.id = 'rx-search-' + formCount;
+            }
+            var selectedNameEl = clone.querySelector('.rx-selected-name');
+            if (selectedNameEl) {
+                selectedNameEl.id = 'rx-selected-' + formCount;
+                selectedNameEl.textContent = '';
+            }
 
             // Update heading
-            const strong = clone.querySelector('strong');
+            var strong = clone.querySelector('strong');
             if (strong) {
                 strong.textContent = 'Prescription #' + (formCount + 1);
             }
 
             container.appendChild(clone);
             totalForms.value = formCount + 1;
+
+            // Init medicine search on the new form
+            initMedicineSearch(clone);
         });
     }
 });

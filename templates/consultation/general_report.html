@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Consultation Report - {{ patient.full_name }}</title>
+    <title>General Report - {{ patient.full_name }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #222; padding: 20px; }
@@ -11,6 +11,10 @@
         .header p { color: #555; font-size: 11px; }
         .section { margin-bottom: 15px; }
         .section-title { background: #0d6efd; color: #fff; padding: 5px 10px; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        .section-title.green { background: #198754; }
+        .section-title.warning { background: #ffc107; color: #222; }
+        .section-title.info { background: #0dcaf0; color: #222; }
+        .section-title.secondary { background: #6c757d; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
         th, td { border: 1px solid #dee2e6; padding: 5px 8px; text-align: left; font-size: 11px; }
         th { background: #f8f9fa; font-weight: 600; }
@@ -24,11 +28,11 @@
         .badge-final { background: #198754; color: #fff; }
         .badge-pending { background: #ffc107; color: #222; }
         .badge-completed { background: #0dcaf0; color: #222; }
-        .rx-table td { font-size: 11px; }
         .footer { text-align: center; border-top: 2px solid #dee2e6; padding-top: 10px; margin-top: 20px; font-size: 10px; color: #888; }
         .signatures { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 10px; }
         .sig-block { width: 45%; text-align: center; }
         .sig-line { border-top: 1px solid #222; margin-top: 40px; padding-top: 5px; font-size: 11px; }
+        .no-data { color: #999; font-style: italic; padding: 8px; }
         @media print {
             body { padding: 10px; }
             .no-print { display: none; }
@@ -45,7 +49,7 @@
     <!-- Header -->
     <div class="header">
         <h2>TENOCARE HOSPITAL</h2>
-        <p>Consultation Report &amp; Patient Summary</p>
+        <p>General Patient Report</p>
     </div>
 
     <!-- Patient Info -->
@@ -59,82 +63,27 @@
             <div class="item"><span class="label">Category:</span> {{ patient.patient_category|default:"General" }}</div>
             <div class="item"><span class="label">Visit No:</span> {{ visit.visit_number }}</div>
             <div class="item"><span class="label">Visit Date:</span> {{ visit.created_at|date:"d M Y H:i" }}</div>
-            <div class="item"><span class="label">Doctor:</span> Dr. {{ doctor_name }}</div>
+            <div class="item"><span class="label">Doctor:</span> Dr. {{ consultation.doctor.get_short_name|default:"--" }}</div>
         </div>
     </div>
 
-    <!-- Triage Vitals -->
-    {% with assessment=visit.triage_assessments.last %}
-    {% if assessment %}
+    <!-- Consultation Summary -->
     <div class="section">
-        <div class="section-title">TRIAGE VITALS</div>
-        <table>
-            <tr>
-                <th>Temp (°C)</th><th>BP (mmHg)</th><th>Pulse (bpm)</th><th>RR (/min)</th><th>SpO2 (%)</th><th>Weight (kg)</th><th>Height (cm)</th>
-            </tr>
-            <tr>
-                <td>{{ assessment.temperature }}</td>
-                <td>{% if assessment.blood_pressure_systolic and assessment.blood_pressure_diastolic %}{{ assessment.blood_pressure_systolic }}/{{ assessment.blood_pressure_diastolic }}{% else %}--{% endif %}</td>
-                <td>{{ assessment.pulse }}</td>
-                <td>{{ assessment.respiratory_rate }}</td>
-                <td>{{ assessment.oxygen_saturation }}</td>
-                <td>{{ assessment.weight }}</td>
-                <td>{{ assessment.height }}</td>
-            </tr>
-        </table>
-        {% if assessment.chief_complaint %}
-        <p><strong>Chief Complaint:</strong> {{ assessment.chief_complaint }}</p>
-        {% endif %}
-        {% if assessment.nurse_notes %}
-        <p><strong>Nurse Notes:</strong> {{ assessment.nurse_notes }}</p>
-        {% endif %}
-    </div>
-    {% endif %}
-    {% endwith %}
-
-    <!-- Consultation Notes -->
-    <div class="section">
-        <div class="section-title">CONSULTATION NOTES</div>
+        <div class="section-title secondary">CONSULTATION SUMMARY</div>
         <table>
             <tr><th style="width:150px;">Diagnosis</th><td>{{ consultation.diagnosis|default:"--" }}</td></tr>
-            <tr><th>Notes</th><td>{{ consultation.notes|default:"--" }}</td></tr>
-            <tr><th>Started</th><td>{{ consultation.started_at|date:"d M Y H:i" }}</td></tr>
-            {% if consultation.completed_at %}
-            <tr><th>Completed</th><td>{{ consultation.completed_at|date:"d M Y H:i" }}</td></tr>
+            <tr><th>Treatment Plan</th><td>{{ consultation.treatment_plan|default:"--" }}</td></tr>
+            {% if consultation.notes %}
+            <tr><th>Notes</th><td>{{ consultation.notes }}</td></tr>
             {% endif %}
         </table>
     </div>
 
-    <!-- Prescriptions -->
-    {% if consultation.prescriptions.all %}
-    <div class="section">
-        <div class="section-title">PRESCRIPTIONS</div>
-        <table class="rx-table">
-            <thead>
-                <tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Qty</th><th>Route</th></tr>
-            </thead>
-            <tbody>
-                {% for rx in consultation.prescriptions.all %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ rx.medicine.name|default:rx.medicine_name }}</td>
-                    <td>{{ rx.dosage }}</td>
-                    <td>{{ rx.frequency }}</td>
-                    <td>{{ rx.duration_days }} days</td>
-                    <td>{{ rx.quantity }}</td>
-                    <td>{{ rx.route|default:"Oral" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
-
     <!-- Laboratory Results -->
-    {% if previous_lab_requests %}
     <div class="section">
-        <div class="section-title">LABORATORY RESULTS</div>
-        {% for req in previous_lab_requests %}
+        <div class="section-title">LABORATORY TESTS</div>
+        {% if lab_requests %}
+        {% for req in lab_requests %}
         <div style="margin-bottom: 12px; border: 1px solid #dee2e6; padding: 8px; border-radius: 4px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                 <strong>{{ req.lab_test.name }}</strong>
@@ -186,23 +135,23 @@
             {% endif %}
 
             <p style="font-size: 10px; color: #888; margin-top: 4px;">
-                Reference: {{ req.lab_test.normal_range|default:"--" }}
-                | Completed by {{ lab_tech_name }}
-                {% if req.completed_at %} on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
+                {% if req.completed_at %}Completed on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
             </p>
             {% if req.remarks %}
             <p style="font-size: 11px;"><strong>Remarks:</strong> {{ req.remarks }}</p>
             {% endif %}
         </div>
         {% endfor %}
+        {% else %}
+        <p class="no-data">No laboratory tests were ordered.</p>
+        {% endif %}
     </div>
-    {% endif %}
 
     <!-- Radiology Results -->
-    {% if previous_rad_requests %}
     <div class="section">
-        <div class="section-title">RADIOLOGY / IMAGING RESULTS</div>
-        {% for req in previous_rad_requests %}
+        <div class="section-title warning">RADIOLOGY / IMAGING</div>
+        {% if rad_requests %}
+        {% for req in rad_requests %}
         <div style="margin-bottom: 12px; border: 1px solid #dee2e6; padding: 8px; border-radius: 4px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                 <strong>{{ req.radiology_service.name }}</strong>
@@ -230,27 +179,68 @@
             <p style="color: #999;"><em>Pending results</em></p>
             {% endif %}
             <p style="font-size: 10px; color: #888; margin-top: 4px;">
-                Completed by {{ radiologist_name }}
-                {% if req.completed_at %} on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
+                {% if req.completed_at %}Completed on {{ req.completed_at|date:"d M Y H:i" }}{% endif %}
             </p>
         </div>
         {% endfor %}
+        {% else %}
+        <p class="no-data">No radiology/imaging was ordered.</p>
+        {% endif %}
     </div>
-    {% endif %}
 
-    <!-- Previous Consultations -->
-    {% if previous_consultations %}
+    <!-- Prescriptions -->
     <div class="section">
-        <div class="section-title">PREVIOUS CONSULTATIONS</div>
-        {% for cons in previous_consultations %}
-        <div style="margin-bottom: 8px; border-bottom: 1px dotted #ddd; padding-bottom: 5px;">
-            <p><strong>Date:</strong> {{ cons.started_at|date:"d M Y H:i" }} | <strong>Doctor:</strong> Dr. {{ doctor_name }}</p>
-            {% if cons.diagnosis %}<p><strong>Diagnosis:</strong> {{ cons.diagnosis }}</p>{% endif %}
-            {% if cons.notes %}<p>{{ cons.notes|truncatewords:30 }}</p>{% endif %}
-        </div>
-        {% endfor %}
+        <div class="section-title green">PRESCRIPTIONS</div>
+        {% if prescriptions %}
+        <table>
+            <thead>
+                <tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Qty</th><th>Route</th></tr>
+            </thead>
+            <tbody>
+                {% for rx in prescriptions %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ rx.medicine.name|default:rx.medicine_name }}</td>
+                    <td>{{ rx.dosage }}</td>
+                    <td>{{ rx.frequency }}</td>
+                    <td>{{ rx.duration_days }} days</td>
+                    <td>{{ rx.quantity }}</td>
+                    <td>{{ rx.route|default:"Oral" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="no-data">No prescriptions were issued.</p>
+        {% endif %}
     </div>
-    {% endif %}
+
+    <!-- Pharmacy Dispenses -->
+    <div class="section">
+        <div class="section-title info">PHARMACY DISPENSED</div>
+        {% if dispenses %}
+        <table>
+            <thead>
+                <tr><th>#</th><th>Medicine</th><th>Qty Dispensed</th><th>Batch No</th><th>Charge</th><th>Dispensed By</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+                {% for d in dispenses %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ d.medicine.name }}</td>
+                    <td>{{ d.quantity_dispensed }}</td>
+                    <td>{{ d.batch_number|default:"--" }}</td>
+                    <td>KSH {{ d.charge|floatformat:2 }}</td>
+                    <td>{{ d.dispensed_by.get_short_name|default:"--" }}</td>
+                    <td>{{ d.dispensed_at|date:"d M Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="no-data">No medications dispensed yet.</p>
+        {% endif %}
+    </div>
 
     <!-- Signatures -->
     <div class="signatures">

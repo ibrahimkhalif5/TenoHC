@@ -119,12 +119,12 @@
                                         <input type="number" name="temperature" class="form-control" step="0.1" required>
                                     </div>
                                     <div class="col-md-4 mb-2">
-                                        <label class="form-label fw-bold">BP Systolic</label>
-                                        <input type="number" name="blood_pressure_systolic" class="form-control" required>
+                                        <label class="form-label fw-bold">BP Systolic (optional)</label>
+                                        <input type="number" name="blood_pressure_systolic" class="form-control">
                                     </div>
                                     <div class="col-md-4 mb-2">
-                                        <label class="form-label fw-bold">BP Diastolic</label>
-                                        <input type="number" name="blood_pressure_diastolic" class="form-control" required>
+                                        <label class="form-label fw-bold">BP Diastolic (optional)</label>
+                                        <input type="number" name="blood_pressure_diastolic" class="form-control">
                                     </div>
                                     <div class="col-md-4 mb-2">
                                         <label class="form-label fw-bold">Pulse (bpm)</label>
@@ -162,7 +162,9 @@
                                 <div>
                                     <strong>{{ v.record_date|date:"d M Y" }}</strong>
                                     <span class="badge bg-success ms-2">{{ v.temperature }}°C</span>
+                                    {% if v.blood_pressure_systolic and v.blood_pressure_diastolic %}
                                     <span class="badge bg-info">BP {{ v.blood_pressure_systolic }}/{{ v.blood_pressure_diastolic }}</span>
+                                    {% endif %}
                                     <span class="badge bg-warning text-dark">Pulse {{ v.pulse }}</span>
                                     <span class="badge bg-secondary">O₂ {{ v.oxygen_saturation }}%</span>
                                     {% if v.weight %}

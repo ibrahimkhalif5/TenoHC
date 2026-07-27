@@ -40,7 +40,6 @@ class LabReportPDFGenerator(DocumentTemplateService):
         self.visit = (
             Visit.objects
             .select_related("patient", "patient__patient_category")
-            .prefetch_related("triage_assessments")
             .get(pk=visit_id)
         )
         self.patient = self.visit.patient
@@ -173,7 +172,6 @@ class LabReportPDFGenerator(DocumentTemplateService):
         els = []
         els.extend(self._build_centered_header())
         els.extend(self._build_patient_section())
-        els.extend(self._build_vitals_section())
         els.extend(self._build_tests_section())
         return els
 
@@ -336,69 +334,6 @@ class LabReportPDFGenerator(DocumentTemplateService):
 
         els = []
         els.append(Paragraph("PATIENT INFORMATION", s["SectionTitle"]))
-        els.append(HRFlowable(width="100%", thickness=0.5, color=PRIMARY, spaceAfter=4))
-        els.append(table)
-        els.append(Spacer(1, 6))
-        return els
-
-    # ── Vitals section ──────────────────────────────────────────────
-
-    def _build_vitals_section(self):
-        triage = self.visit.triage_assessments.last()
-        if not triage:
-            return []
-
-        s = self.styles
-        w = self.content_width
-        col = w / 4
-
-        data = [
-            [
-                Paragraph("<b>Temp</b>", s["PatientLabel"]),
-                Paragraph("<b>Blood Pressure</b>", s["PatientLabel"]),
-                Paragraph("<b>Pulse</b>", s["PatientLabel"]),
-                Paragraph("<b>O2 Sat</b>", s["PatientLabel"]),
-            ],
-            [
-                Paragraph(f"{triage.temperature} C", s["PatientValue"]),
-                Paragraph(f"{triage.blood_pressure_systolic}/{triage.blood_pressure_diastolic} mmHg", s["PatientValue"]),
-                Paragraph(f"{triage.pulse} bpm", s["PatientValue"]),
-                Paragraph(f"{triage.oxygen_saturation}%", s["PatientValue"]),
-            ],
-            [
-                Spacer(1, 4),
-                Spacer(1, 4),
-                Spacer(1, 4),
-                Spacer(1, 4),
-            ],
-            [
-                Paragraph("<b>Weight</b>", s["PatientLabel"]),
-                Paragraph("<b>Height</b>", s["PatientLabel"]),
-                Spacer(1, 4),
-                Spacer(1, 4),
-            ],
-            [
-                Paragraph(f"{triage.weight} kg", s["PatientValue"]),
-                Paragraph(f"{triage.height} cm", s["PatientValue"]),
-                Spacer(1, 4),
-                Spacer(1, 4),
-            ],
-        ]
-
-        table = Table(data, colWidths=[col, col, col, col])
-        table.setStyle(TableStyle([
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 1),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("LINEBELOW", (0, 0), (-1, 0), 0.5, BORDER),
-            ("BACKGROUND", (0, 0), (-1, 0), LIGHT_GRAY),
-            ("BACKGROUND", (0, 3), (-1, 3), LIGHT_GRAY),
-        ]))
-
-        els = []
-        els.append(Paragraph("VITAL SIGNS", s["SectionTitle"]))
         els.append(HRFlowable(width="100%", thickness=0.5, color=PRIMARY, spaceAfter=4))
         els.append(table)
         els.append(Spacer(1, 6))

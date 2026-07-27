@@ -107,7 +107,7 @@
                 </div>
                 <div class="vital-item">
                     <span class="vital-label">Blood Pressure</span>
-                    <span class="vital-value">{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg</span>
+                    <span class="vital-value">{% if triage.blood_pressure_systolic and triage.blood_pressure_diastolic %}{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg{% else %}--{% endif %}</span>
                 </div>
                 <div class="vital-item">
                     <span class="vital-label">Pulse</span>

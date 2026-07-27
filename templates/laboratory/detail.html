@@ -162,7 +162,7 @@
             <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-activity me-2"></i>Latest Vitals</h6></div>
             <div class="card-body py-2">
                 <div class="vital-item"><span class="vital-label">Temperature</span><span class="vital-value">{{ triage.temperature }} C</span></div>
-                <div class="vital-item"><span class="vital-label">Blood Pressure</span><span class="vital-value">{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg</span></div>
+                <div class="vital-item"><span class="vital-label">Blood Pressure</span><span class="vital-value">{% if triage.blood_pressure_systolic and triage.blood_pressure_diastolic %}{{ triage.blood_pressure_systolic }}/{{ triage.blood_pressure_diastolic }} mmHg{% else %}--{% endif %}</span></div>
                 <div class="vital-item"><span class="vital-label">Pulse</span><span class="vital-value">{{ triage.pulse }} bpm</span></div>
                 <div class="vital-item"><span class="vital-label">O2 Saturation</span><span class="vital-value">{{ triage.oxygen_saturation }}%</span></div>
                 <div class="vital-item"><span class="vital-label">Weight</span><span class="vital-value">{{ triage.weight }} kg</span></div>
