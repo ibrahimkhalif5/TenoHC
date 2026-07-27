@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize lab_tags %}
 
 {% block title %}Laboratory - {{ patient.full_name }} - TCHIMS{% endblock %}
 
@@ -298,7 +298,7 @@
                                            name="param_{{ req.pk }}_{{ param.id }}"
                                            class="form-control form-control-sm param-result-input"
                                            placeholder="--"
-                                           value="{{ result_values|default_if_none:'' }}"
+                                           value="{{ result_values|get_item:param.id }}"
                                            data-min="{{ param.normal_min|default:'' }}"
                                            data-max="{{ param.normal_max|default:'' }}"
                                            data-param-id="{{ param.id }}">
