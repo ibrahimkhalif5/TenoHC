@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.http import JsonResponse
 
@@ -51,12 +51,12 @@ class MedicineCreateView(LoginRequiredMixin, View):
 
 class MedicineEditView(LoginRequiredMixin, View):
     def get(self, request, medicine_id):
-        medicine = Medicine.objects.get(pk=medicine_id)
+        medicine = get_object_or_404(Medicine, pk=medicine_id)
         form = MedicineForm(instance=medicine)
         return render(request, "inventory/medicine_form.html", {"form": form, "title": f"Edit: {medicine.name}"})
 
     def post(self, request, medicine_id):
-        medicine = Medicine.objects.get(pk=medicine_id)
+        medicine = get_object_or_404(Medicine, pk=medicine_id)
         form = MedicineForm(request.POST, instance=medicine)
         if form.is_valid():
             form.save()
@@ -81,7 +81,7 @@ class MedicineDetailView(LoginRequiredMixin, View):
 
 class MedicineDeleteView(LoginRequiredMixin, View):
     def post(self, request, medicine_id):
-        medicine = Medicine.objects.get(pk=medicine_id)
+        medicine = get_object_or_404(Medicine, pk=medicine_id)
         medicine.is_active = False
         medicine.save(update_fields=["is_active", "updated_at"])
         messages.success(request, f"{medicine.name} deactivated.")
@@ -212,7 +212,7 @@ class StockListView(LoginRequiredMixin, View):
 
 class StockAdjustView(LoginRequiredMixin, View):
     def post(self, request, stock_id):
-        stock = Stock.objects.get(pk=stock_id)
+        stock = get_object_or_404(Stock, pk=stock_id)
         form = StockAdjustForm(request.POST)
         if form.is_valid():
             services.adjust_stock(

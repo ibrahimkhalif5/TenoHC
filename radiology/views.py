@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
 from triage.models import Visit
@@ -26,11 +26,11 @@ class RadiologyVisitDetailView(LoginRequiredMixin, View):
     """
 
     def get(self, request, visit_id):
-        visit = (
+        visit = get_object_or_404(
             Visit.objects
             .select_related("patient", "patient__patient_category")
-            .prefetch_related("radiology_requests__radiology_service", "triage_assessments")
-            .get(pk=visit_id)
+            .prefetch_related("radiology_requests__radiology_service", "triage_assessments"),
+            pk=visit_id,
         )
         radiology_requests = (
             RadiologyRequest.objects

@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.http import JsonResponse
 from django.db.models import Count, Q
@@ -40,7 +40,7 @@ class AdmissionCreateView(LoginRequiredMixin, View):
 
     def get(self, request, visit_id):
         from triage.models import Visit
-        visit = Visit.objects.select_related("patient", "patient__patient_category").get(pk=visit_id)
+        visit = get_object_or_404(Visit.objects.select_related("patient", "patient__patient_category"), pk=visit_id)
         wards = services.get_all_wards()
         form = AdmissionForm()
         return render(request, "admission/admit.html", {
@@ -75,7 +75,7 @@ class AdmissionCreateView(LoginRequiredMixin, View):
             messages.error(request, "Please correct the errors below.")
 
         from triage.models import Visit
-        visit = Visit.objects.select_related("patient").get(pk=visit_id)
+        visit = get_object_or_404(Visit.objects.select_related("patient"), pk=visit_id)
         return render(request, "admission/admit.html", {
             "visit": visit,
             "patient": visit.patient,
@@ -88,9 +88,9 @@ class AdmissionDischargeView(LoginRequiredMixin, View):
     """Discharge a patient."""
 
     def get(self, request, admission_id):
-        admission = Admission.objects.select_related(
+        admission = get_object_or_404(Admission.objects.select_related(
             "patient", "ward", "room", "bed", "visit",
-        ).get(pk=admission_id)
+        ), pk=admission_id)
         return render(request, "admission/discharge.html", {
             "admission": admission,
         })
@@ -155,12 +155,12 @@ class WardCreateView(LoginRequiredMixin, View):
 
 class WardEditView(LoginRequiredMixin, View):
     def get(self, request, ward_id):
-        ward = Ward.objects.get(pk=ward_id)
+        ward = get_object_or_404(Ward, pk=ward_id)
         form = WardForm(instance=ward)
         return render(request, "admission/ward_edit.html", {"ward": ward, "form": form})
 
     def post(self, request, ward_id):
-        ward = Ward.objects.get(pk=ward_id)
+        ward = get_object_or_404(Ward, pk=ward_id)
         form = WardForm(request.POST, instance=ward)
         if form.is_valid():
             form.save()

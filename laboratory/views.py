@@ -38,11 +38,11 @@ class LabVisitDetailView(LoginRequiredMixin, View):
     """
 
     def get(self, request, visit_id):
-        visit = (
+        visit = get_object_or_404(
             Visit.objects
             .select_related("patient", "patient__patient_category")
-            .prefetch_related("lab_requests__lab_test", "triage_assessments")
-            .get(pk=visit_id)
+            .prefetch_related("lab_requests__lab_test", "triage_assessments"),
+            pk=visit_id,
         )
 
         lab_requests = (
