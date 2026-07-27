@@ -63,35 +63,6 @@
         </div>
     </div>
 
-    <!-- Triage Vitals -->
-    {% with assessment=visit.triage_assessments.last %}
-    {% if assessment %}
-    <div class="section">
-        <div class="section-title">TRIAGE VITALS</div>
-        <table>
-            <tr>
-                <th>Temp (°C)</th><th>BP (mmHg)</th><th>Pulse (bpm)</th><th>RR (/min)</th><th>SpO2 (%)</th><th>Weight (kg)</th><th>Height (cm)</th>
-            </tr>
-            <tr>
-                <td>{{ assessment.temperature }}</td>
-                <td>{% if assessment.blood_pressure_systolic and assessment.blood_pressure_diastolic %}{{ assessment.blood_pressure_systolic }}/{{ assessment.blood_pressure_diastolic }}{% else %}--{% endif %}</td>
-                <td>{{ assessment.pulse }}</td>
-                <td>{{ assessment.respiratory_rate }}</td>
-                <td>{{ assessment.oxygen_saturation }}</td>
-                <td>{{ assessment.weight }}</td>
-                <td>{{ assessment.height }}</td>
-            </tr>
-        </table>
-        {% if assessment.chief_complaint %}
-        <p><strong>Chief Complaint:</strong> {{ assessment.chief_complaint }}</p>
-        {% endif %}
-        {% if assessment.nurse_notes %}
-        <p><strong>Nurse Notes:</strong> {{ assessment.nurse_notes }}</p>
-        {% endif %}
-    </div>
-    {% endif %}
-    {% endwith %}
-
     <!-- Consultation Notes -->
     <div class="section">
         <div class="section-title">CONSULTATION NOTES</div>
