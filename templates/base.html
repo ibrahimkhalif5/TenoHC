@@ -477,7 +477,14 @@
                 if (!ok) return;
                 var form = el.closest('form');
                 if (form) {
-                    form.submit();
+                    if (el.hasAttribute('formaction')) {
+                        var orig = form.getAttribute('action');
+                        form.setAttribute('action', el.getAttribute('formaction'));
+                        form.submit();
+                        form.setAttribute('action', orig);
+                    } else {
+                        form.submit();
+                    }
                 } else {
                     if (el.href) window.location.href = el.href;
                 }
