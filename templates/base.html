@@ -7,6 +7,7 @@
     <title>{% block title %}TCHIMS{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
     <style>
         :root {
@@ -374,16 +375,9 @@
 
         <!-- Messages -->
         {% if messages %}
-        <div class="messages-container">
+        <div class="messages-container" style="display:none;">
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {% if message.tags == 'success' %}<i class="bi bi-check-circle me-1"></i>
-                {% elif message.tags == 'error' %}<i class="bi bi-exclamation-triangle me-1"></i>
-                {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-circle me-1"></i>
-                {% elif message.tags == 'info' %}<i class="bi bi-info-circle me-1"></i>
-                {% endif %}{{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
+            <div class="swal-message" data-tags="{{ message.tags }}">{{ message }}</div>
             {% endfor %}
         </div>
         {% endif %}
@@ -408,6 +402,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -416,11 +411,19 @@
             overlay.classList.toggle('show');
         }
 
-        // Auto-dismiss alerts after 5 seconds
-        document.querySelectorAll('.messages-container .alert').forEach(function(el) {
-            setTimeout(function() {
-                bootstrap.Alert.getOrCreateInstance(el).close();
-            }, 5000);
+        // Django messages as SweetAlert2 toasts
+        document.querySelectorAll('.swal-message').forEach(function(el) {
+            var tag = el.dataset.tags;
+            var iconMap = { success: 'success', error: 'error', warning: 'warning', info: 'info' };
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: iconMap[tag] || 'info',
+                title: el.textContent.trim(),
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+            });
         });
 
         // HTMX request indicator
@@ -434,83 +437,32 @@
     <script src="{% static 'js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
 
-    <!-- Modern Alert Modal -->
-    <div class="modal fade" id="appAlertModal" tabindex="-1" aria-labelledby="appAlertModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="appAlertModalLabel">
-                        <i class="bi bi-info-circle-fill text-primary me-2"></i>Notice
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p id="appAlertMessage" class="mb-0 fs-6"></p>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">OK</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modern Confirm Modal -->
-    <div class="modal fade" id="appConfirmModal" tabindex="-1" aria-labelledby="appConfirmModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="appConfirmModalLabel">
-                        <i class="bi bi-question-circle-fill text-warning me-2"></i>Confirm
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p id="appConfirmMessage" class="mb-0 fs-6"></p>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-secondary px-3" id="appConfirmCancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary px-3" id="appConfirmOk">OK</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // Replace native alert() with Bootstrap modal
+        // Replace native alert() with SweetAlert2
         window.alert = function(message, title) {
-            var modal = document.getElementById('appAlertModal');
-            var msgEl = document.getElementById('appAlertMessage');
-            var titleEl = document.getElementById('appAlertModalLabel');
-            msgEl.textContent = message;
-            if (title) {
-                titleEl.innerHTML = '<i class="bi bi-info-circle-fill text-primary me-2"></i>' + title;
-            } else {
-                titleEl.innerHTML = '<i class="bi bi-info-circle-fill text-primary me-2"></i>Notice';
-            }
-            new bootstrap.Modal(modal).show();
+            Swal.fire({
+                title: title || 'Notice',
+                html: message,
+                icon: 'info',
+                confirmButtonText: 'OK',
+                customClass: { confirmButton: 'btn btn-primary' },
+                buttonsStyling: false,
+            });
         };
 
-        // Replace native confirm() with Bootstrap modal (returns Promise)
+        // Replace native confirm() with SweetAlert2 (returns Promise)
         window.appConfirm = function(message) {
-            return new Promise(function(resolve) {
-                var modal = document.getElementById('appConfirmModal');
-                var msgEl = document.getElementById('appConfirmMessage');
-                msgEl.textContent = message;
-                var bsModal = new bootstrap.Modal(modal);
-
-                document.getElementById('appConfirmOk').onclick = function() {
-                    bsModal.hide();
-                    resolve(true);
-                };
-                document.getElementById('appConfirmCancel').onclick = function() {
-                    bsModal.hide();
-                    resolve(false);
-                };
-                modal.querySelector('.btn-close').onclick = function() {
-                    bsModal.hide();
-                    resolve(false);
-                };
-                bsModal.show();
+            return Swal.fire({
+                title: 'Are you sure?',
+                html: message,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes',
+                cancelButtonText: 'Cancel',
+                customClass: { confirmButton: 'btn btn-primary me-2', cancelButton: 'btn btn-secondary' },
+                buttonsStyling: false,
+            }).then(function(result) {
+                return result.isConfirmed;
             });
         };
 
@@ -523,12 +475,10 @@
             var msg = el.getAttribute('data-confirm');
             appConfirm(msg).then(function(ok) {
                 if (!ok) return;
-                // If it's a form submit button, submit the form
                 var form = el.closest('form');
                 if (form) {
                     form.submit();
                 } else {
-                    // It's a link — navigate
                     if (el.href) window.location.href = el.href;
                 }
             });
