@@ -101,7 +101,7 @@
             {% if req.result_values.all %}
             <table>
                 <thead>
-                    <tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Normal Range</th><th>Status</th></tr>
+                    <tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th><th>Status</th></tr>
                 </thead>
                 <tbody>
                     {% for rv in req.result_values.all %}
@@ -132,6 +132,7 @@
             </table>
             {% else %}
             <p><strong>Result:</strong> {{ req.result|default:"Pending" }}</p>
+            <p style="font-size: 10px; color: #888; margin-top: 4px;">Reference Range: {{ req.lab_test.normal_range|default:"--" }}</p>
             {% endif %}
 
             <p style="font-size: 10px; color: #888; margin-top: 4px;">

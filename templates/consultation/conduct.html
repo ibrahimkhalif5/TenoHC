@@ -155,7 +155,7 @@
                                         <th>Parameter</th>
                                         <th>Result</th>
                                         <th>Unit</th>
-                                        <th>Normal Range</th>
+                                        <th>Reference Range</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
@@ -186,7 +186,7 @@
                             <span>{{ req.result|default:"<em class='text-muted'>Pending</em>"|safe }}</span>
                         </div>
                         <div>
-                            <small class="fw-bold text-muted">Reference:</small>
+                            <small class="fw-bold text-muted">Reference Range:</small>
                             <small class="text-muted">{{ req.lab_test.normal_range|default:"--" }}</small>
                         </div>
                         {% endif %}
